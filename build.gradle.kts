@@ -3,35 +3,36 @@ import net.ltgt.gradle.errorprone.errorprone
 plugins {
     java
     application
-    id("net.ltgt.errorprone") version "0.8.1"
+    id("net.ltgt.errorprone") version "2.0.1"
 }
 
 java {
-    sourceCompatibility = JavaVersion.VERSION_11
-    targetCompatibility = JavaVersion.VERSION_11
+    toolchain {
+        languageVersion.set(JavaLanguageVersion.of(16))
+    }
 }
 
 repositories {
-    jcenter()
+    mavenCentral()
 }
 
 dependencies {
     // Checks
-    errorprone("com.google.errorprone:error_prone_core:2.3.3")
+    errorprone("com.google.errorprone:error_prone_core:2.7.1")
 
     // Logging
-    compile("org.slf4j:slf4j-api:1.7.26")
-    compile("ch.qos.logback:logback-classic:1.2.3")
+    implementation("org.slf4j:slf4j-api:1.7.30")
+    implementation("ch.qos.logback:logback-classic:1.2.3")
 
     // Annotations for better code documentation
-    compile("com.intellij:annotations:12.0")
+    implementation("org.jetbrains:annotations:21.0.1")
 
     // Guava primitives
-    compile("com.google.guava:guava:27.0.1-jre")
+    implementation("com.google.guava:guava:30.1.1-jre")
 
     // JUnit Jupiter test framework
-    testCompile("org.junit.jupiter:junit-jupiter-api:5.4.0")
-    testRuntime("org.junit.jupiter:junit-jupiter-engine:5.4.0")
+    testImplementation("org.junit.jupiter:junit-jupiter-api:5.7.2")
+    testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:5.7.2")
 }
 
 val run by tasks.getting(JavaExec::class) {
@@ -47,7 +48,7 @@ tasks {
 
 application {
     // Define the main class for the application
-    mainClassName = "ru.mail.polis.Client"
+    mainClass.set("ru.mail.polis.Client")
 
     // And limit Xmx
     applicationDefaultJvmArgs = listOf("-Xmx128m")

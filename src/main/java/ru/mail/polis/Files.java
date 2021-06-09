@@ -16,8 +16,6 @@
 
 package ru.mail.polis;
 
-import org.jetbrains.annotations.NotNull;
-
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.FileVisitResult;
@@ -25,6 +23,7 @@ import java.nio.file.Path;
 import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.concurrent.atomic.AtomicLong;
+import org.jetbrains.annotations.NotNull;
 
 /**
  * Utility methods for handling files.
@@ -32,47 +31,48 @@ import java.util.concurrent.atomic.AtomicLong;
  * @author Vadim Tsesko
  */
 final class Files {
-    private Files() {
-        // Don't instantiate
-    }
 
-    static void recursiveDelete(@NotNull final File path) throws IOException {
-        java.nio.file.Files.walkFileTree(
-                path.toPath(),
-                new SimpleFileVisitor<>() {
-                    @NotNull
-                    @Override
-                    public FileVisitResult visitFile(
-                            @NotNull final Path file,
-                            @NotNull final BasicFileAttributes attrs) throws IOException {
-                        java.nio.file.Files.delete(file);
-                        return FileVisitResult.CONTINUE;
-                    }
+  private Files() {
+    // Don't instantiate
+  }
 
-                    @Override
-                    public FileVisitResult postVisitDirectory(
-                            final Path dir,
-                            final IOException exc) throws IOException {
-                        java.nio.file.Files.delete(dir);
-                        return FileVisitResult.CONTINUE;
-                    }
-                });
-    }
+  static void recursiveDelete(@NotNull final File path) throws IOException {
+    java.nio.file.Files.walkFileTree(
+        path.toPath(),
+        new SimpleFileVisitor<>() {
+          @NotNull
+          @Override
+          public FileVisitResult visitFile(
+              @NotNull final Path file,
+              @NotNull final BasicFileAttributes attrs) throws IOException {
+            java.nio.file.Files.delete(file);
+            return FileVisitResult.CONTINUE;
+          }
 
-    static long directorySize(@NotNull final File path) throws IOException {
-        final AtomicLong result = new AtomicLong(0L);
-        java.nio.file.Files.walkFileTree(
-                path.toPath(),
-                new SimpleFileVisitor<>() {
-                    @NotNull
-                    @Override
-                    public FileVisitResult visitFile(
-                            @NotNull final Path file,
-                            @NotNull final BasicFileAttributes attrs) {
-                        result.addAndGet(attrs.size());
-                        return FileVisitResult.CONTINUE;
-                    }
-                });
-        return result.get();
-    }
+          @Override
+          public FileVisitResult postVisitDirectory(
+              final Path dir,
+              final IOException exc) throws IOException {
+            java.nio.file.Files.delete(dir);
+            return FileVisitResult.CONTINUE;
+          }
+        });
+  }
+
+  static long directorySize(@NotNull final File path) throws IOException {
+    final AtomicLong result = new AtomicLong(0L);
+    java.nio.file.Files.walkFileTree(
+        path.toPath(),
+        new SimpleFileVisitor<>() {
+          @NotNull
+          @Override
+          public FileVisitResult visitFile(
+              @NotNull final Path file,
+              @NotNull final BasicFileAttributes attrs) {
+            result.addAndGet(attrs.size());
+            return FileVisitResult.CONTINUE;
+          }
+        });
+    return result.get();
+  }
 }

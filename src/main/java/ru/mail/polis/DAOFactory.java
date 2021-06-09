@@ -16,10 +16,10 @@
 
 package ru.mail.polis;
 
-import org.jetbrains.annotations.NotNull;
-
 import java.io.File;
 import java.io.IOException;
+import org.jetbrains.annotations.NotNull;
+import ru.mail.polis.markus.DaoImpl;
 
 /**
  * Custom {@link DAO} factory.
@@ -27,33 +27,33 @@ import java.io.IOException;
  * @author Vadim Tsesko
  */
 public final class DAOFactory {
-    static final long MAX_HEAP = 128 * 1024 * 1024;
 
-    private DAOFactory() {
-        // Not instantiatable
+  static final long MAX_HEAP = 128 * 1024 * 1024;
+
+  private DAOFactory() {
+    // Not instantiatable
+  }
+
+  /**
+   * Construct a {@link DAO} instance.
+   *
+   * @param data local disk folder to persist the data to
+   * @return a storage instance
+   */
+  @NotNull
+  static DAO create(@NotNull final File data) throws IOException {
+    if (Runtime.getRuntime().maxMemory() > MAX_HEAP) {
+      throw new IllegalStateException("The heap is too big. Consider setting Xmx.");
     }
 
-    /**
-     * Construct a {@link DAO} instance.
-     *
-     * @param data local disk folder to persist the data to
-     * @return a storage instance
-     */
-    @NotNull
-    static DAO create(@NotNull final File data) throws IOException {
-        if (Runtime.getRuntime().maxMemory() > MAX_HEAP) {
-            throw new IllegalStateException("The heap is too big. Consider setting Xmx.");
-        }
-
-        if (!data.exists()) {
-            throw new IllegalArgumentException("Path doesn't exist: " + data);
-        }
-
-        if (!data.isDirectory()) {
-            throw new IllegalArgumentException("Path is not a directory: " + data);
-        }
-
-        // TODO: Implement me
-        throw new UnsupportedOperationException("Implement me!");
+    if (!data.exists()) {
+      throw new IllegalArgumentException("Path doesn't exist: " + data);
     }
+
+    if (!data.isDirectory()) {
+      throw new IllegalArgumentException("Path is not a directory: " + data);
+    }
+
+    return new DaoImpl(data);
+  }
 }

@@ -16,10 +16,12 @@
 
 package ru.mail.polis;
 
-import com.google.common.collect.Iterators;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
+import com.google.common.collect.Iterators;
 import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -28,8 +30,8 @@ import java.util.Map;
 import java.util.NavigableMap;
 import java.util.NoSuchElementException;
 import java.util.TreeMap;
-
-import static org.junit.jupiter.api.Assertions.*;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 /**
  * Functional unit tests for {@link DAO} implementations.
@@ -69,11 +71,12 @@ class BasicTest extends TestBase {
             }
 
             // Check the data
-            final Iterator<Map.Entry<ByteBuffer, ByteBuffer>> expectedIter = map.entrySet().iterator();
-            final Iterator<Record> actualIter = dao.iterator(ByteBuffer.wrap(new byte[0]));
+            final Iterator<Map.Entry<ByteBuffer, ByteBuffer>> expectedIter = map.entrySet()
+                .iterator();
+            final Iterator<DaoRecord> actualIter = dao.iterator(ByteBuffer.wrap(new byte[0]));
             while (expectedIter.hasNext()) {
                 final Map.Entry<ByteBuffer, ByteBuffer> expected = expectedIter.next();
-                final Record actual = actualIter.next();
+                final DaoRecord actual = actualIter.next();
                 final ByteBuffer expectedKey = expected.getKey();
                 final ByteBuffer actualKey = actual.getKey();
                 assertEquals(expectedKey, actualKey);
@@ -97,11 +100,12 @@ class BasicTest extends TestBase {
             }
 
             // Check the data
-            final Iterator<Map.Entry<ByteBuffer, ByteBuffer>> expectedIter = map.entrySet().iterator();
-            final Iterator<Record> actualIter = dao.iterator(map.firstKey());
+            final Iterator<Map.Entry<ByteBuffer, ByteBuffer>> expectedIter = map.entrySet()
+                .iterator();
+            final Iterator<DaoRecord> actualIter = dao.iterator(map.firstKey());
             while (expectedIter.hasNext()) {
                 final Map.Entry<ByteBuffer, ByteBuffer> expected = expectedIter.next();
-                final Record actual = actualIter.next();
+                final DaoRecord actual = actualIter.next();
                 final ByteBuffer expectedKey = expected.getKey();
                 final ByteBuffer actualKey = actual.getKey();
                 assertEquals(expectedKey, actualKey);
@@ -127,11 +131,11 @@ class BasicTest extends TestBase {
             // Check the data
             final ByteBuffer middle = Iterators.get(map.keySet().iterator(), count / 2);
             final Iterator<Map.Entry<ByteBuffer, ByteBuffer>> expectedIter =
-                    map.tailMap(middle).entrySet().iterator();
-            final Iterator<Record> actualIter = dao.iterator(middle);
+                map.tailMap(middle).entrySet().iterator();
+            final Iterator<DaoRecord> actualIter = dao.iterator(middle);
             while (expectedIter.hasNext()) {
                 final Map.Entry<ByteBuffer, ByteBuffer> expected = expectedIter.next();
-                final Record actual = actualIter.next();
+                final DaoRecord actual = actualIter.next();
                 final ByteBuffer expectedKey = expected.getKey();
                 final ByteBuffer actualKey = actual.getKey();
                 assertEquals(expectedKey, actualKey);
@@ -155,7 +159,7 @@ class BasicTest extends TestBase {
             }
 
             // Check the data
-            final Iterator<Record> actualIter = dao.iterator(map.lastKey());
+            final Iterator<DaoRecord> actualIter = dao.iterator(map.lastKey());
             assertEquals(map.get(map.lastKey()), actualIter.next().getValue());
             assertFalse(actualIter.hasNext());
         }
