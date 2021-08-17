@@ -16,14 +16,13 @@
 
 package ru.mail.polis;
 
-import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
-
 import java.io.Closeable;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * Storage interface.
@@ -34,24 +33,24 @@ import java.util.NoSuchElementException;
 public interface DAO extends Closeable {
 
     /**
-     * Provides iterator (possibly empty) over {@link Record}s starting at "from" key (inclusive)
-     * in <b>ascending</b> order according to {@link Record#compareTo(Record)}.
-     * N.B. The iterator should be obtained as fast as possible, e.g.
-     * one should not "seek" to start point ("from" element) in linear time ;)
+     * Provides iterator (possibly empty) over {@link DaoRecord}s starting at "from" key (inclusive)
+     * in <b>ascending</b> order according to {@link DaoRecord#compareTo(DaoRecord)}. N.B. The
+     * iterator should be obtained as fast as possible, e.g. one should not "seek" to start point
+     * ("from" element) in linear time ;)
      */
     @NotNull
-    Iterator<Record> iterator(@NotNull ByteBuffer from) throws IOException;
+    Iterator<DaoRecord> iterator(@NotNull ByteBuffer from) throws IOException;
 
     /**
-     * Provides iterator (possibly empty) over {@link Record}s starting at "from" key (inclusive)
-     * until given "to" key (exclusive) in <b>ascending</b> order according to {@link Record#compareTo(Record)}.
+     * Provides iterator (possibly empty) over {@link DaoRecord}s starting at "from" key (inclusive)
+     * until given "to" key (exclusive) in <b>ascending</b> order according to {@link DaoRecord#compareTo(DaoRecord)}.
      * N.B. The iterator should be obtained as fast as possible, e.g.
      * one should not "seek" to start point ("from" element) in linear time ;)
      */
     @NotNull
-    default Iterator<Record> range(
-            @NotNull ByteBuffer from,
-            @Nullable ByteBuffer to) throws IOException {
+    default Iterator<DaoRecord> range(
+        @NotNull ByteBuffer from,
+        @Nullable ByteBuffer to) throws IOException {
         if (to == null) {
             return iterator(from);
         }
@@ -60,23 +59,22 @@ public interface DAO extends Closeable {
             return Iters.empty();
         }
 
-        final Record bound = new Record(to, ByteBuffer.allocate(0));
+        final DaoRecord bound = new DaoRecord(to, ByteBuffer.allocate(0));
         return Iters.until(iterator(from), bound);
     }
 
     /**
-     * Obtains {@link Record} corresponding to given key.
+     * Obtains {@link DaoRecord} corresponding to given key.
      *
      * @throws NoSuchElementException if no such record
      */
     @NotNull
     default ByteBuffer get(@NotNull ByteBuffer key) throws IOException, NoSuchElementException {
-        final Iterator<Record> iter = iterator(key);
+        final Iterator<DaoRecord> iter = iterator(key);
         if (!iter.hasNext()) {
             throw new NoSuchElementException("Not found");
         }
-
-        final Record next = iter.next();
+        final DaoRecord next = iter.next();
         if (next.getKey().equals(key)) {
             return next.getValue();
         } else {

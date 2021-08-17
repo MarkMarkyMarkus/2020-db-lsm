@@ -1,16 +1,15 @@
 package ru.mail.polis;
 
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
-import org.opentest4j.AssertionFailedError;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 
 import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Iterator;
 import java.util.stream.Stream;
-
-import static org.junit.jupiter.api.Assertions.assertFalse;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
+import org.opentest4j.AssertionFailedError;
 
 /**
  * Generates a lot of tombstones
@@ -39,7 +38,7 @@ class AllDeadTest extends TestBase {
             }
 
             // Check contents
-            final Iterator<Record> empty = dao.iterator(ByteBuffer.allocate(0));
+            final Iterator<DaoRecord> empty = dao.iterator(ByteBuffer.allocate(0));
             assertFalse(empty.hasNext());
         }
     }
