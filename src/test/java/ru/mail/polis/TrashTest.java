@@ -19,16 +19,16 @@ import static org.junit.jupiter.api.Assertions.*;
  */
 class TrashTest extends TestBase {
 
-  private static void createTrashFile(
-      final File dir,
-      final String name) throws IOException {
-    assertTrue(new File(dir, name).createNewFile());
-  }
-
   private static void createTrashDirectory(
       final File dir,
       final String name) {
     assertTrue(new File(dir, name).mkdir());
+  }
+
+  private static void createTrashFile(
+      final File dir,
+      final String name) throws IOException {
+    assertTrue(new File(dir, name).createNewFile());
   }
 
   private static void createTrashFile(

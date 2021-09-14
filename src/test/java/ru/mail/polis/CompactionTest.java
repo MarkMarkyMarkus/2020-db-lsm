@@ -31,7 +31,7 @@ import static org.junit.jupiter.api.Assertions.*;
 /**
  * Compaction tests for {@link DAO} implementations
  *
- * @author Vadim Tsesko <incubos@yandex.com>
+ * @author Vadim Tsesko (incubos@yandex.com)
  */
 class CompactionTest extends TestBase {
 

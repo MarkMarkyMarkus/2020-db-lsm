@@ -1,9 +1,16 @@
 # 2020-db-lsm
-Курсовой проект 2020 года [курса](https://polis.mail.ru/curriculum/program/discipline/970/) "Использование баз данных" в [Технополис](https://polis.mail.ru).
+
+Курсовой проект 2020 года [курса](https://polis.mail.ru/curriculum/program/discipline/970/) "
+Использование баз данных" в [Технополис](https://polis.mail.ru).
+
+[![CodeFactor](https://www.codefactor.io/repository/github/markmarkymarkus/2020-db-lsm/badge)](https://www.codefactor.io/repository/github/markmarkymarkus/2020-db-lsm)
 
 ## Этап 1. In-memory (deadline 2020-04-21)
+
 ### Fork
+
 [Форкните проект](https://help.github.com/articles/fork-a-repo/), склонируйте и добавьте `upstream`:
+
 ```
 $ git clone git@github.com:<username>/2020-db-lsm.git
 Cloning into '2020-db-lsm'...
