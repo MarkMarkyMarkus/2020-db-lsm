@@ -1,11 +1,11 @@
 package ru.mail.polis;
 
+import ru.mail.polis.markus.SerializableByteBuffer;
+
 import java.io.Serial;
 import java.io.Serializable;
 import java.nio.ByteBuffer;
 import java.util.Objects;
-import org.jetbrains.annotations.NotNull;
-import ru.mail.polis.markus.SerializableByteBuffer;
 
 /**
  * Record from {@link DAO}.
@@ -15,21 +15,17 @@ import ru.mail.polis.markus.SerializableByteBuffer;
 public class DaoRecord implements Comparable<DaoRecord>, Serializable {
 
   @Serial
-  private static final long serialVersionUID = 2060319717416423010L;
+  private static final long serialVersionUID = 1L;
 
   private final SerializableByteBuffer key;
   private final SerializableByteBuffer value;
 
-  public DaoRecord(
-      @NotNull final ByteBuffer key,
-      @NotNull final ByteBuffer value) {
+  public DaoRecord(final ByteBuffer key, final ByteBuffer value) {
     this.key = new SerializableByteBuffer(key);
     this.value = new SerializableByteBuffer(value);
   }
 
-  public static DaoRecord of(
-      @NotNull final ByteBuffer key,
-      @NotNull final ByteBuffer value) {
+  public static DaoRecord of(final ByteBuffer key, final ByteBuffer value) {
     return new DaoRecord(key, value);
   }
 
@@ -59,7 +55,7 @@ public class DaoRecord implements Comparable<DaoRecord>, Serializable {
   }
 
   @Override
-  public int compareTo(@NotNull final DaoRecord other) {
+  public int compareTo(final DaoRecord other) {
     return this.key.byteBuffer().compareTo(other.key.byteBuffer());
   }
 

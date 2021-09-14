@@ -1,5 +1,12 @@
 package ru.mail.polis.markus;
 
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import ru.mail.polis.DAO;
+import ru.mail.polis.DaoRecord;
+
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -17,21 +24,15 @@ import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.SortedMap;
 import java.util.TreeMap;
-import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import ru.mail.polis.DAO;
-import ru.mail.polis.DaoRecord;
 
 public class DaoImpl implements DAO {
 
-  private final static Logger log = LoggerFactory.getLogger(DaoImpl.class);
+  private static final Logger LOG = LoggerFactory.getLogger(DaoImpl.class);
 
   private final SortedMap<ByteBuffer, ByteBuffer> dao = new TreeMap<>();
   private final File folder;
 
-  public DaoImpl(@NotNull final File data) throws IOException {
+  public DaoImpl(final File data) throws IOException {
     this.folder = data;
     loadData();
   }
@@ -54,7 +55,7 @@ public class DaoImpl implements DAO {
   }
 
   @Override
-  public @NotNull Iterator<DaoRecord> iterator(@NotNull ByteBuffer from) throws IOException {
+  public Iterator<DaoRecord> iterator(ByteBuffer from) throws IOException {
     return dao
         .tailMap(from)
         .entrySet()
@@ -64,24 +65,24 @@ public class DaoImpl implements DAO {
   }
 
   @Override
-  public @NotNull Iterator<DaoRecord> range(@NotNull ByteBuffer from, @Nullable ByteBuffer to)
+  public Iterator<DaoRecord> range(ByteBuffer from, @Nullable ByteBuffer to)
       throws IOException {
     return DAO.super.range(from, to);
   }
 
   @Override
-  public @NotNull ByteBuffer get(@NotNull ByteBuffer key)
+  public ByteBuffer get(ByteBuffer key)
       throws IOException, NoSuchElementException {
     return DAO.super.get(key);
   }
 
   @Override
-  public void upsert(@NotNull ByteBuffer key, @NotNull ByteBuffer value) throws IOException {
+  public void upsert(ByteBuffer key, ByteBuffer value) throws IOException {
     dao.put(key.duplicate(), value.duplicate());
   }
 
   @Override
-  public void remove(@NotNull ByteBuffer key) throws IOException {
+  public void remove(ByteBuffer key) throws IOException {
     dao.remove(key);
   }
 
@@ -107,17 +108,16 @@ public class DaoImpl implements DAO {
   }
 
   @SuppressWarnings("unchecked")
-  @NotNull
   private Iterable<DaoRecord> readFile(final Path path) {
     try (var objectInputStream = new ObjectInputStream(new FileInputStream(path.toFile()))) {
       try {
         return (Iterable<DaoRecord>) objectInputStream.readObject();
       } catch (ClassNotFoundException | ClassCastException e) {
-        log.error("Error deserializing SSTable: ", e);
+        LOG.error("Error deserializing SSTable: ", e);
         return List.of();
       }
     } catch (IOException e) {
-      log.error("Error deserializing SSTable: ", e);
+      LOG.error("Error deserializing SSTable: ", e);
       return List.of();
     }
   }

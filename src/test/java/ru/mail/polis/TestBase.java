@@ -27,35 +27,36 @@ import java.util.concurrent.ThreadLocalRandom;
  * @author Vadim Tsesko
  */
 abstract class TestBase {
-    static final int KEY_LENGTH = 16;
-    private static final int VALUE_LENGTH = 1024;
 
-    @NotNull
-    static ByteBuffer randomBuffer(final int length) {
-        assert length > 0;
-        final byte[] result = new byte[length];
-        ThreadLocalRandom.current().nextBytes(result);
-        return ByteBuffer.wrap(result);
-    }
+  static final int KEY_LENGTH = 16;
+  private static final int VALUE_LENGTH = 1024;
 
-    @NotNull
-    static ByteBuffer randomKey() {
-        return randomBuffer(KEY_LENGTH);
-    }
+  @NotNull
+  static ByteBuffer randomBuffer(final int length) {
+    assert length > 0;
+    final byte[] result = new byte[length];
+    ThreadLocalRandom.current().nextBytes(result);
+    return ByteBuffer.wrap(result);
+  }
 
-    @NotNull
-    static ByteBuffer randomValue() {
-        return randomBuffer(VALUE_LENGTH);
-    }
+  @NotNull
+  static ByteBuffer randomKey() {
+    return randomBuffer(KEY_LENGTH);
+  }
 
-    @NotNull
-    static ByteBuffer join(
-            @NotNull final ByteBuffer left,
-            @NotNull final ByteBuffer right) {
-        final ByteBuffer result = ByteBuffer.allocate(left.remaining() + right.remaining());
-        result.put(left.duplicate());
-        result.put(right.duplicate());
-        result.rewind();
-        return result;
-    }
+  @NotNull
+  static ByteBuffer randomValue() {
+    return randomBuffer(VALUE_LENGTH);
+  }
+
+  @NotNull
+  static ByteBuffer join(
+      @NotNull final ByteBuffer left,
+      @NotNull final ByteBuffer right) {
+    final ByteBuffer result = ByteBuffer.allocate(left.remaining() + right.remaining());
+    result.put(left.duplicate());
+    result.put(right.duplicate());
+    result.rewind();
+    return result;
+  }
 }

@@ -7,16 +7,15 @@ import java.io.Serial;
 import java.io.Serializable;
 import java.nio.ByteBuffer;
 import java.util.Objects;
-import org.jetbrains.annotations.NotNull;
 
 public class SerializableByteBuffer implements Serializable {
 
   @Serial
-  private static final long serialVersionUID = -2485327341370127279L;
+  private static final long serialVersionUID = 1L;
 
   private transient ByteBuffer byteBuffer;
 
-  public SerializableByteBuffer(@NotNull final ByteBuffer byteBuffer) {
+  public SerializableByteBuffer(final ByteBuffer byteBuffer) {
     this.byteBuffer = byteBuffer;
   }
 

@@ -16,10 +16,11 @@
 
 package ru.mail.polis;
 
-import java.io.File;
-import java.io.IOException;
 import org.jetbrains.annotations.NotNull;
 import ru.mail.polis.markus.DaoImpl;
+
+import java.io.File;
+import java.io.IOException;
 
 /**
  * Custom {@link DAO} factory.

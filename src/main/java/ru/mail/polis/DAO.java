@@ -16,13 +16,13 @@
 
 package ru.mail.polis;
 
+import org.jetbrains.annotations.Nullable;
+
 import java.io.Closeable;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
-import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
 /**
  * Storage interface.
@@ -32,72 +32,63 @@ import org.jetbrains.annotations.Nullable;
  */
 public interface DAO extends Closeable {
 
-    /**
-     * Provides iterator (possibly empty) over {@link DaoRecord}s starting at "from" key (inclusive)
-     * in <b>ascending</b> order according to {@link DaoRecord#compareTo(DaoRecord)}. N.B. The
-     * iterator should be obtained as fast as possible, e.g. one should not "seek" to start point
-     * ("from" element) in linear time ;)
-     */
-    @NotNull
-    Iterator<DaoRecord> iterator(@NotNull ByteBuffer from) throws IOException;
+  /**
+   * Provides iterator (possibly empty) over {@link DaoRecord}s starting at "from" key (inclusive) in <b>ascending</b>
+   * order according to {@link DaoRecord#compareTo(DaoRecord)}. N.B. The iterator should be obtained as fast as
+   * possible, e.g. one should not "seek" to start point ("from" element) in linear time ;)
+   */
+  Iterator<DaoRecord> iterator(ByteBuffer from) throws IOException;
 
-    /**
-     * Provides iterator (possibly empty) over {@link DaoRecord}s starting at "from" key (inclusive)
-     * until given "to" key (exclusive) in <b>ascending</b> order according to {@link DaoRecord#compareTo(DaoRecord)}.
-     * N.B. The iterator should be obtained as fast as possible, e.g.
-     * one should not "seek" to start point ("from" element) in linear time ;)
-     */
-    @NotNull
-    default Iterator<DaoRecord> range(
-        @NotNull ByteBuffer from,
-        @Nullable ByteBuffer to) throws IOException {
-        if (to == null) {
-            return iterator(from);
-        }
-
-        if (from.compareTo(to) > 0) {
-            return Iters.empty();
-        }
-
-        final DaoRecord bound = new DaoRecord(to, ByteBuffer.allocate(0));
-        return Iters.until(iterator(from), bound);
+  /**
+   * Provides iterator (possibly empty) over {@link DaoRecord}s starting at "from" key (inclusive) until given "to" key
+   * (exclusive) in <b>ascending</b> order according to {@link DaoRecord#compareTo(DaoRecord)}. N.B. The iterator should
+   * be obtained as fast as possible, e.g. one should not "seek" to start point ("from" element) in linear time ;)
+   */
+  default Iterator<DaoRecord> range(ByteBuffer from, @Nullable ByteBuffer to) throws IOException {
+    if (to == null) {
+      return iterator(from);
     }
 
-    /**
-     * Obtains {@link DaoRecord} corresponding to given key.
-     *
-     * @throws NoSuchElementException if no such record
-     */
-    @NotNull
-    default ByteBuffer get(@NotNull ByteBuffer key) throws IOException, NoSuchElementException {
-        final Iterator<DaoRecord> iter = iterator(key);
-        if (!iter.hasNext()) {
-            throw new NoSuchElementException("Not found");
-        }
-        final DaoRecord next = iter.next();
-        if (next.getKey().equals(key)) {
-            return next.getValue();
-        } else {
-            throw new NoSuchElementException("Not found");
-        }
+    if (from.compareTo(to) > 0) {
+      return Iters.empty();
     }
 
-    /**
-     * Inserts or updates value by given key.
-     */
-    void upsert(
-            @NotNull ByteBuffer key,
-            @NotNull ByteBuffer value) throws IOException;
+    final DaoRecord bound = new DaoRecord(to, ByteBuffer.allocate(0));
+    return Iters.until(iterator(from), bound);
+  }
 
-    /**
-     * Removes value by given key.
-     */
-    void remove(@NotNull ByteBuffer key) throws IOException;
-
-    /**
-     * Perform compaction
-     */
-    default void compact() throws IOException {
-        // Implement me when you get to stage 3
+  /**
+   * Obtains {@link DaoRecord} corresponding to given key.
+   *
+   * @throws NoSuchElementException if no such record
+   */
+  default ByteBuffer get(ByteBuffer key) throws IOException, NoSuchElementException {
+    final Iterator<DaoRecord> iter = iterator(key);
+    if (!iter.hasNext()) {
+      throw new NoSuchElementException("Not found");
     }
+    final DaoRecord next = iter.next();
+    if (next.getKey().equals(key)) {
+      return next.getValue();
+    } else {
+      throw new NoSuchElementException("Not found");
+    }
+  }
+
+  /**
+   * Inserts or updates value by given key.
+   */
+  void upsert(ByteBuffer key, ByteBuffer value) throws IOException;
+
+  /**
+   * Removes value by given key.
+   */
+  void remove(ByteBuffer key) throws IOException;
+
+  /**
+   * Perform compaction.
+   */
+  default void compact() throws IOException {
+    // Implement me when you get to stage 3
+  }
 }
