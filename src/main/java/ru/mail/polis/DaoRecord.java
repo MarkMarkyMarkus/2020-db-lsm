@@ -38,11 +38,11 @@ public class DaoRecord implements Comparable<DaoRecord>, Serializable {
   }
 
   @Override
-  public boolean equals(final Object o) {
-    if (this == o) {
+  public boolean equals(final Object obj) {
+    if (this == obj) {
       return true;
     }
-    if (!(o instanceof final DaoRecord daoRecord)) {
+    if (!(obj instanceof final DaoRecord daoRecord)) {
       return false;
     }
     return Objects.equals(key, daoRecord.key)

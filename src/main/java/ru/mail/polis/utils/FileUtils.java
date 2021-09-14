@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package ru.mail.polis;
+package ru.mail.polis.utils;
 
 import java.io.File;
 import java.io.IOException;
@@ -30,31 +30,31 @@ import java.util.concurrent.atomic.AtomicLong;
  *
  * @author Vadim Tsesko
  */
-final class FileUtils {
+public final class FileUtils {
 
   private FileUtils() {
     // Don't instantiate
   }
 
-  static void recursiveDelete(final File path) throws IOException {
+  public static void recursiveDelete(final File path) throws IOException {
     Files.walkFileTree(
         path.toPath(),
         new SimpleFileVisitor<>() {
           @Override
           public FileVisitResult visitFile(final Path file, final BasicFileAttributes attrs) throws IOException {
-            java.nio.file.Files.delete(file);
+            Files.delete(file);
             return FileVisitResult.CONTINUE;
           }
 
           @Override
           public FileVisitResult postVisitDirectory(final Path dir, final IOException exc) throws IOException {
-            java.nio.file.Files.delete(dir);
+            Files.delete(dir);
             return FileVisitResult.CONTINUE;
           }
         });
   }
 
-  static long directorySize(final File path) throws IOException {
+  public static long directorySize(final File path) throws IOException {
     final AtomicLong result = new AtomicLong(0L);
     Files.walkFileTree(
         path.toPath(),

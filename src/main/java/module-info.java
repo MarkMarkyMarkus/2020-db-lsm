@@ -8,5 +8,6 @@ module db.lsm.markus {
   requires transitive org.jetbrains.annotations;
 
   exports ru.mail.polis;
+  exports ru.mail.polis.utils;
 
 }

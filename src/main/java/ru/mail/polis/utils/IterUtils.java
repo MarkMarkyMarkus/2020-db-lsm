@@ -1,4 +1,4 @@
-package ru.mail.polis;
+package ru.mail.polis.utils;
 
 import com.google.common.base.Functions;
 
@@ -11,7 +11,7 @@ import java.util.function.Function;
  *
  * @author Dmitry Schitinin
  */
-public final class Iters {
+public final class IterUtils {
 
   private static final Iterator<Object> EMPTY = new Iterator<>() {
     @Override
@@ -25,7 +25,7 @@ public final class Iters {
     }
   };
 
-  private Iters() {
+  private IterUtils() {
 
   }
 

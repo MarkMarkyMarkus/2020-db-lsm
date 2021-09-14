@@ -17,6 +17,7 @@
 package ru.mail.polis;
 
 import org.jetbrains.annotations.Nullable;
+import ru.mail.polis.utils.IterUtils;
 
 import java.io.Closeable;
 import java.io.IOException;
@@ -50,11 +51,11 @@ public interface DAO extends Closeable {
     }
 
     if (from.compareTo(to) > 0) {
-      return Iters.empty();
+      return IterUtils.empty();
     }
 
     final DaoRecord bound = new DaoRecord(to, ByteBuffer.allocate(0));
-    return Iters.until(iterator(from), bound);
+    return IterUtils.until(iterator(from), bound);
   }
 
   /**
@@ -62,7 +63,7 @@ public interface DAO extends Closeable {
    *
    * @throws NoSuchElementException if no such record
    */
-  default ByteBuffer get(ByteBuffer key) throws IOException, NoSuchElementException {
+  default ByteBuffer get(ByteBuffer key) throws IOException {
     final Iterator<DaoRecord> iter = iterator(key);
     if (!iter.hasNext()) {
       throw new NoSuchElementException("Not found");

@@ -19,6 +19,7 @@ package ru.mail.polis;
 import org.junit.jupiter.api.RepeatedTest;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import ru.mail.polis.utils.FileUtils;
 
 import java.io.File;
 import java.io.IOException;

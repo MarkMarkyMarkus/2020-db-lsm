@@ -18,6 +18,7 @@ package ru.mail.polis;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import ru.mail.polis.utils.FileUtils;
 
 import java.io.File;
 import java.io.IOException;
@@ -29,7 +30,7 @@ import java.util.NoSuchElementException;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * Compaction tests for {@link DAO} implementations
+ * Compaction tests for {@link DAO} implementations.
  *
  * @author Vadim Tsesko (incubos@yandex.com)
  */

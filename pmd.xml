@@ -8,6 +8,14 @@
   <description>Technopolis Java Rule Set</description>
 
   <rule ref="category/java/bestpractices.xml"/>
+
+  <rule ref="category/java/bestpractices.xml/GuardLogStatement">
+    <properties>
+      <property name="logLevels" value="trace,debug"/>
+      <property name="guardsMethods" value="isTraceEnabled,isDebugEnabled"/>
+    </properties>
+  </rule>
+
   <rule ref="category/java/codestyle.xml">
     <exclude name="CommentDefaultAccessModifier"/>
     <exclude name="LocalVariableCouldBeFinal"/>
@@ -15,6 +23,7 @@
     <exclude name="ShortClassName"/>
     <exclude name="ShortMethodName"/>
     <exclude name="UselessParentheses"/>
+    <exclude name="OnlyOneReturn"/>
   </rule>
   <rule ref="category/java/codestyle.xml/ClassNamingConventions">
     <properties>
@@ -25,6 +34,11 @@
       <property name="annotationPattern" value="[A-Z][a-zA-Z0-9]*"/>
       <property name="utilityClassPattern"
         value="[A-Z][a-zA-Z0-9]+(s|Utils?|Helper|Constants|Factory)"/>
+    </properties>
+  </rule>
+  <rule ref="category/java/codestyle.xml/ShortVariable">
+    <properties>
+      <property name="minimum" value="2"/>
     </properties>
   </rule>
   <rule ref="category/java/design.xml">
