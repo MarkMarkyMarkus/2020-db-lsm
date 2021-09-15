@@ -36,6 +36,12 @@ public final class FileUtils {
     // Don't instantiate
   }
 
+  /**
+   * Recursively delete files and directories at the specified path.
+   *
+   * @param path path to the files
+   * @throws IOException if something went wrong
+   */
   public static void recursiveDelete(final File path) throws IOException {
     Files.walkFileTree(
         path.toPath(),
@@ -54,6 +60,13 @@ public final class FileUtils {
         });
   }
 
+  /**
+   * Calculate directory size.
+   *
+   * @param path path to the directory
+   * @return size of all files in the directory (in bytes)
+   * @throws IOException if something went wrong
+   */
   public static long directorySize(final File path) throws IOException {
     final AtomicLong result = new AtomicLong(0L);
     Files.walkFileTree(

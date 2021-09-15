@@ -22,6 +22,9 @@ import java.util.List;
 import java.util.SortedMap;
 import java.util.TreeMap;
 
+/**
+ * Base DAO implementation.
+ */
 public class DaoImpl implements DAO {
 
   private static final Logger LOG = LoggerFactory.getLogger(DaoImpl.class);
