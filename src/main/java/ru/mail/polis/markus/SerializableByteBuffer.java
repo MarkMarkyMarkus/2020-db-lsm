@@ -7,40 +7,39 @@ import java.io.Serial;
 import java.io.Serializable;
 import java.nio.ByteBuffer;
 import java.util.Objects;
-import org.jetbrains.annotations.NotNull;
 
 public class SerializableByteBuffer implements Serializable {
 
   @Serial
-  private static final long serialVersionUID = -2485327341370127279L;
+  private static final long serialVersionUID = 1L;
 
   private transient ByteBuffer byteBuffer;
 
-  public SerializableByteBuffer(@NotNull final ByteBuffer byteBuffer) {
-    this.byteBuffer = byteBuffer;
+  public SerializableByteBuffer(final ByteBuffer byteBuffer) {
+    this.byteBuffer = byteBuffer.duplicate();
   }
 
   public ByteBuffer byteBuffer() {
-    return this.byteBuffer;
+    return this.byteBuffer.asReadOnlyBuffer();
   }
 
   @Serial
   private void writeObject(final ObjectOutputStream out) throws IOException {
     final var bufferLength = byteBuffer.remaining();
-    final var arrayFromByteBuffer = new byte[bufferLength];
-    byteBuffer.get(arrayFromByteBuffer);
+    final var arrayBuffer = new byte[bufferLength];
+    byteBuffer.get(arrayBuffer);
 
     out.writeInt(bufferLength);
-    out.write(arrayFromByteBuffer);
+    out.write(arrayBuffer);
     out.flush();
   }
 
   @Serial
-  private void readObject(final ObjectInputStream in) throws IOException, ClassNotFoundException {
-    final var bufferSize = in.readInt();
+  private void readObject(final ObjectInputStream objectInputStream) throws IOException, ClassNotFoundException {
+    final var bufferSize = objectInputStream.readInt();
     final var buffer = new byte[bufferSize];
 
-    in.readFully(buffer);
+    objectInputStream.readFully(buffer);
     byteBuffer = ByteBuffer.wrap(buffer);
   }
 
@@ -50,16 +49,12 @@ public class SerializableByteBuffer implements Serializable {
   }
 
   @Override
-  public boolean equals(Object o) {
-    if (this == o) {
+  public boolean equals(Object obj) {
+    if (this == obj) {
       return true;
     }
 
-    if (o instanceof ByteBuffer that) {
-      return byteBuffer.equals(that);
-    }
-
-    if (!(o instanceof SerializableByteBuffer that)) {
+    if (!(obj instanceof SerializableByteBuffer that)) {
       return false;
     }
     return byteBuffer.equals(that.byteBuffer);

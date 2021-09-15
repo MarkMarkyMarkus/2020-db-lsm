@@ -28,8 +28,14 @@ plugins:
       AvoidSynchronizedAtMethodLevel:
         enabled: false
       AvoidThrowingRawExceptionTypes:
-        enabled: false 
+        enabled: false
       DataClass:
+        enabled: false
+      UselessParentheses:
+        enabled: false
+      MethodArgumentCouldBeFinal:
+        enabled: false
+      LocalVariableCouldBeFinal:
         enabled: false
   sonar-java:
     enabled: true
@@ -58,5 +64,5 @@ checks:
     config:
       threshold: 10 # Have pattern-matching-like code
 exclude_patterns:
-- "**/*.svg"
-- "src/test/"
+  - "**/*.svg"
+  - "src/test/"

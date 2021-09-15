@@ -11,7 +11,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * Music database over {@link DAO}.
@@ -19,112 +19,117 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
  * @author Vadim Tsesko
  */
 class MusicTest extends TestBase {
-    private static String DELIMITER = ":";
 
-    @NotNull
-    private static ByteBuffer artistFrom(
-            @NotNull final String artist) {
-        assert !artist.contains(DELIMITER);
-        return ByteBuffer.wrap((artist + DELIMITER).getBytes(Charsets.UTF_8));
+  private static final String DELIMITER = ":";
+
+  @NotNull
+  private static ByteBuffer artistFrom(
+      @NotNull final String artist) {
+    assert !artist.contains(DELIMITER);
+    return ByteBuffer.wrap((artist + DELIMITER).getBytes(Charsets.UTF_8));
+  }
+
+  @NotNull
+  private static ByteBuffer albumFrom(
+      @NotNull final String artist,
+      @NotNull final String album) {
+    assert !artist.contains(DELIMITER);
+    assert !album.contains(DELIMITER);
+    return ByteBuffer.wrap((artist + DELIMITER + album + DELIMITER).getBytes(Charsets.UTF_8));
+  }
+
+  @NotNull
+  private static ByteBuffer trackFrom(
+      @NotNull final String artist,
+      @NotNull final String album,
+      @NotNull final String track) {
+    assert !artist.contains(DELIMITER);
+    assert !album.contains(DELIMITER);
+    assert !track.contains(DELIMITER);
+    return ByteBuffer.wrap(
+        (artist + DELIMITER + album + DELIMITER + track).getBytes(Charsets.UTF_8));
+  }
+
+  @NotNull
+  private static ByteBuffer from(final int... bytes) {
+    assert Arrays.stream(bytes).allMatch(b -> Byte.MIN_VALUE <= b && b <= Byte.MAX_VALUE);
+    final byte[] buffer = new byte[bytes.length];
+    for (int i = 0; i < buffer.length; i++) {
+      buffer[i] = (byte) bytes[i];
+    }
+    return ByteBuffer.wrap(buffer);
+  }
+
+  @NotNull
+  private static ByteBuffer next(@NotNull final ByteBuffer buffer) {
+    boolean ones = true;
+    for (int i = 0; i < buffer.remaining(); i++) {
+      if (buffer.get(i) != Byte.MAX_VALUE) {
+        ones = false;
+        break;
+      }
     }
 
-    @NotNull
-    private static ByteBuffer albumFrom(
-            @NotNull final String artist,
-            @NotNull final String album) {
-        assert !artist.contains(DELIMITER);
-        assert !album.contains(DELIMITER);
-        return ByteBuffer.wrap((artist + DELIMITER + album + DELIMITER).getBytes(Charsets.UTF_8));
+    final byte[] next = new byte[buffer.remaining() + (ones ? 1 : 0)];
+    int j = next.length - 1;
+    int carry = 1;
+    for (int i = buffer.remaining() - 1; i >= 0; i--, j--) {
+      final int b = buffer.get(i);
+      final int sum = b + carry;
+      final byte v;
+      if (sum > Byte.MAX_VALUE) {
+        v = 0;
+        carry = 1;
+      } else {
+        v = (byte) sum;
+        carry = 0;
+      }
+      next[j] = v;
     }
 
-    @NotNull
-    private static ByteBuffer trackFrom(
-            @NotNull final String artist,
-            @NotNull final String album,
-            @NotNull final String track) {
-        assert !artist.contains(DELIMITER);
-        assert !album.contains(DELIMITER);
-        assert !track.contains(DELIMITER);
-        return ByteBuffer.wrap((artist + DELIMITER + album + DELIMITER + track).getBytes(Charsets.UTF_8));
+    if (ones) {
+      next[0] = (byte) carry;
     }
 
-    @NotNull
-    private static ByteBuffer from(final int... bytes) {
-        assert Arrays.stream(bytes).allMatch(b -> Byte.MIN_VALUE <= b && b <= Byte.MAX_VALUE);
-        final byte[] buffer = new byte[bytes.length];
-        for (int i = 0; i < buffer.length; i++) {
-            buffer[i] = (byte) bytes[i];
-        }
-        return ByteBuffer.wrap(buffer);
+    return ByteBuffer.wrap(next);
+  }
+
+  @Test
+  void nextTest() {
+    assertEquals(from(1), next(from(0)));
+    assertEquals(from(-126), next(from(-127)));
+    assertEquals(from(1, 0), next(from(127)));
+    assertEquals(from(1, 0, 0), next(from(127, 127)));
+    assertEquals(from(127, 127), next(from(127, 126)));
+    assertEquals(from(127, 0), next(from(126, 127)));
+  }
+
+  @Test
+  void database(@TempDir File data) throws IOException {
+    // Fill music database
+    try (DAO dao = DAOFactory.create(data)) {
+      dao.upsert(trackFrom("Ar1", "Al11", "T111"), randomValue());
+      dao.upsert(trackFrom("Ar1", "Al11", "T112"), randomValue());
+      dao.upsert(trackFrom("Ar1", "Al12", "T111"), randomValue());
+      dao.upsert(trackFrom("Ar1", "Al12", "T112"), randomValue());
+      dao.upsert(trackFrom("Ar1", "Al12", "T113"), randomValue());
+      dao.upsert(trackFrom("Ar2", "Al21", "T211"), randomValue());
+      dao.upsert(trackFrom("Ar2", "Al21", "T212"), randomValue());
     }
 
-    @NotNull
-    private static ByteBuffer next(@NotNull final ByteBuffer buffer) {
-        boolean ones = true;
-        for (int i = 0; i < buffer.remaining(); i++) {
-            if (buffer.get(i) != Byte.MAX_VALUE) {
-                ones = false;
-                break;
-            }
-        }
+    // Open music database
+    try (DAO dao = DAOFactory.create(data)) {
+      // Artists
+      assertEquals(5, Iterators.size(dao.range(artistFrom("Ar1"), next(artistFrom("Ar1")))));
+      assertEquals(2, Iterators.size(dao.range(artistFrom("Ar2"), next(artistFrom("Ar2")))));
 
-        final byte[] next = new byte[buffer.remaining() + (ones ? 1 : 0)];
-        int j = next.length - 1;
-        int carry = 1;
-        for (int i = buffer.remaining() - 1; i >= 0; i--, j--) {
-            final int b = buffer.get(i);
-            final int sum = b + carry;
-            final byte v;
-            if (sum > Byte.MAX_VALUE) {
-                v = 0;
-                carry = 1;
-            } else {
-                v = (byte) sum;
-                carry = 0;
-            }
-            next[j] = v;
-        }
-
-        if (ones) {
-            next[0] = (byte) carry;
-        }
-
-        return ByteBuffer.wrap(next);
+      // Albums
+      assertEquals(2,
+          Iterators.size(dao.range(albumFrom("Ar1", "Al11"), next(albumFrom("Ar1", "Al11")))));
+      assertEquals(3,
+          Iterators.size(dao.range(albumFrom("Ar1", "Al12"), next(albumFrom("Ar1", "Al12")))));
+      assertEquals(2,
+          Iterators.size(dao.range(albumFrom("Ar2", "Al21"), next(albumFrom("Ar2", "Al21")))));
     }
-
-    @Test
-    void nextTest() {
-        assertEquals(from(1), next(from(0)));
-        assertEquals(from(-126), next(from(-127)));
-        assertEquals(from(1, 0), next(from(127)));
-        assertEquals(from(1, 0, 0), next(from(127, 127)));
-        assertEquals(from(127, 127), next(from(127, 126)));
-        assertEquals(from(127, 0), next(from(126, 127)));
-    }
-
-    @Test
-    void database(@TempDir File data) throws IOException {
-        // Fill music database
-        try (DAO dao = DAOFactory.create(data)) {
-            dao.upsert(trackFrom("Ar1", "Al11", "T111"), randomValue());
-            dao.upsert(trackFrom("Ar1", "Al11", "T112"), randomValue());
-            dao.upsert(trackFrom("Ar1", "Al12", "T111"), randomValue());
-            dao.upsert(trackFrom("Ar1", "Al12", "T112"), randomValue());
-            dao.upsert(trackFrom("Ar1", "Al12", "T113"), randomValue());
-            dao.upsert(trackFrom("Ar2", "Al21", "T211"), randomValue());
-            dao.upsert(trackFrom("Ar2", "Al21", "T212"), randomValue());
-        }
-
-        // Open music database
-        try (DAO dao = DAOFactory.create(data)) {
-            // Artists
-            assertEquals(5, Iterators.size(dao.range(artistFrom("Ar1"), next(artistFrom("Ar1")))));
-            assertEquals(2, Iterators.size(dao.range(artistFrom("Ar2"), next(artistFrom("Ar2")))));
-
-            // Albums
-            assertEquals(2, Iterators.size(dao.range(albumFrom("Ar1", "Al11"), next(albumFrom("Ar1", "Al11")))));
-            assertEquals(3, Iterators.size(dao.range(albumFrom("Ar1", "Al12"), next(albumFrom("Ar1", "Al12")))));
-            assertEquals(2, Iterators.size(dao.range(albumFrom("Ar2", "Al21"), next(albumFrom("Ar2", "Al21")))));
-        }
-    }
+  }
 }

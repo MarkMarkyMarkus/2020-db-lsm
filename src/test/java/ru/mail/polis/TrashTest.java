@@ -1,7 +1,7 @@
 package ru.mail.polis;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 import java.io.File;
 import java.io.IOException;
@@ -9,8 +9,8 @@ import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
+
+import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * Checks ignoring trash files in persistent data directory.
@@ -18,99 +18,100 @@ import org.junit.jupiter.api.io.TempDir;
  * @author Dmitry Schitinin
  */
 class TrashTest extends TestBase {
-    @Test
-    void ignoreEmptyTrashFiles(@TempDir File data) throws IOException {
-        // Reference value
-        final ByteBuffer key = randomKey();
-        final ByteBuffer value = randomValue();
 
-        // Create dao and fill data
-        try (DAO dao = DAOFactory.create(data)) {
-            dao.upsert(key, value);
-        }
+  private static void createTrashDirectory(
+      final File dir,
+      final String name) {
+    assertTrue(new File(dir, name).mkdir());
+  }
 
-        createTrashFile(data, "trash.txt");
-        createTrashFile(data, "trash.dat");
-        createTrashFile(data, "trash");
-        createTrashFile(data, "trash_0");
-        createTrashFile(data, "trash.db");
-        createTrashFile(data, "123trash.dat");
-        createTrashFile(data, "trash123.dat");
+  private static void createTrashFile(
+      final File dir,
+      final String name) throws IOException {
+    assertTrue(new File(dir, name).createNewFile());
+  }
 
-        // Load and check stored value
-        try (DAO dao = DAOFactory.create(data)) {
-            assertEquals(value, dao.get(key));
-        }
+  private static void createTrashFile(
+      final File dir,
+      final String name,
+      final ByteBuffer content) throws IOException {
+    try (final FileChannel ch =
+        FileChannel.open(
+            Paths.get(dir.getAbsolutePath(), name),
+            StandardOpenOption.CREATE,
+            StandardOpenOption.WRITE)) {
+      ch.write(content);
+    }
+  }
+
+  @Test
+  void ignoreEmptyTrashFiles(@TempDir File data) throws IOException {
+    // Reference value
+    final ByteBuffer key = randomKey();
+    final ByteBuffer value = randomValue();
+
+    // Create dao and fill data
+    try (DAO dao = DAOFactory.create(data)) {
+      dao.upsert(key, value);
     }
 
-    @Test
-    void ignoreTrashDirectories(@TempDir File data) throws IOException {
-        // Reference value
-        final ByteBuffer key = randomKey();
-        final ByteBuffer value = randomValue();
+    createTrashFile(data, "trash.txt");
+    createTrashFile(data, "trash.dat");
+    createTrashFile(data, "trash");
+    createTrashFile(data, "trash_0");
+    createTrashFile(data, "trash.db");
+    createTrashFile(data, "123trash.dat");
+    createTrashFile(data, "trash123.dat");
 
-        // Create dao and fill data
-        try (DAO dao = DAOFactory.create(data)) {
-            dao.upsert(key, value);
-        }
+    // Load and check stored value
+    try (DAO dao = DAOFactory.create(data)) {
+      assertEquals(value, dao.get(key));
+    }
+  }
 
-        createTrashDirectory(data, "trash.txt");
-        createTrashDirectory(data, "trash.dat");
-        createTrashDirectory(data, "trash");
-        createTrashDirectory(data, "trash_0");
-        createTrashDirectory(data, "trash.db");
+  @Test
+  void ignoreTrashDirectories(@TempDir File data) throws IOException {
+    // Reference value
+    final ByteBuffer key = randomKey();
+    final ByteBuffer value = randomValue();
 
-        // Load and check stored value
-        try (DAO dao = DAOFactory.create(data)) {
-            assertEquals(value, dao.get(key));
-        }
+    // Create dao and fill data
+    try (DAO dao = DAOFactory.create(data)) {
+      dao.upsert(key, value);
     }
 
-    @Test
-    void ignoreNonEmptyTrashFiles(@TempDir File data) throws IOException {
-        // Reference value
-        final ByteBuffer key = randomKey();
-        final ByteBuffer value = randomValue();
+    createTrashDirectory(data, "trash.txt");
+    createTrashDirectory(data, "trash.dat");
+    createTrashDirectory(data, "trash");
+    createTrashDirectory(data, "trash_0");
+    createTrashDirectory(data, "trash.db");
 
-        // Create dao and fill data
-        try (DAO dao = DAOFactory.create(data)) {
-            dao.upsert(key, value);
-        }
+    // Load and check stored value
+    try (DAO dao = DAOFactory.create(data)) {
+      assertEquals(value, dao.get(key));
+    }
+  }
 
-        createTrashFile(data, "trash.txt", randomValue());
-        createTrashFile(data, "trash.dat", randomValue());
-        createTrashFile(data, "trash", randomValue());
-        createTrashFile(data, "trash_0", randomValue());
-        createTrashFile(data, "trash.db", randomValue());
+  @Test
+  void ignoreNonEmptyTrashFiles(@TempDir File data) throws IOException {
+    // Reference value
+    final ByteBuffer key = randomKey();
+    final ByteBuffer value = randomValue();
 
-        // Load and check stored value
-        try (DAO dao = DAOFactory.create(data)) {
-            assertEquals(value, dao.get(key));
-        }
+    // Create dao and fill data
+    try (DAO dao = DAOFactory.create(data)) {
+      dao.upsert(key, value);
     }
 
-    private static void createTrashFile(
-            final File dir,
-            final String name) throws IOException {
-        assertTrue(new File(dir, name).createNewFile());
-    }
+    createTrashFile(data, "trash.txt", randomValue());
+    createTrashFile(data, "trash.dat", randomValue());
+    createTrashFile(data, "trash", randomValue());
+    createTrashFile(data, "trash_0", randomValue());
+    createTrashFile(data, "trash.db", randomValue());
 
-    private static void createTrashDirectory(
-            final File dir,
-            final String name) {
-        assertTrue(new File(dir, name).mkdir());
+    // Load and check stored value
+    try (DAO dao = DAOFactory.create(data)) {
+      assertEquals(value, dao.get(key));
     }
-
-    private static void createTrashFile(
-            final File dir,
-            final String name,
-            final ByteBuffer content) throws IOException {
-        try (final FileChannel ch =
-                     FileChannel.open(
-                             Paths.get(dir.getAbsolutePath(), name),
-                             StandardOpenOption.CREATE,
-                             StandardOpenOption.WRITE)) {
-            ch.write(content);
-        }
-    }
+  }
 }

@@ -17,7 +17,6 @@
 package ru.mail.polis;
 
 import com.google.common.base.Splitter;
-import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -36,85 +35,78 @@ import java.util.NoSuchElementException;
  * @author Vadim Tsesko
  */
 public final class Client {
-    private static final Logger log = LoggerFactory.getLogger(Client.class);
-    private static final String DATA = "data";
 
-    private Client() {
-        // Not instantiable
+  private static final Logger LOG = LoggerFactory.getLogger(Client.class);
+  private static final String DATA = "data";
+
+  private Client() {
+    // Not instantiable
+  }
+
+  private static ByteBuffer from(final String value) {
+    return ByteBuffer.wrap(value.getBytes(StandardCharsets.UTF_8));
+  }
+
+  private static String from(final ByteBuffer value) {
+    final byte[] bytes = new byte[value.remaining()];
+    value.get(bytes);
+    return new String(bytes, StandardCharsets.UTF_8);
+  }
+
+  /**
+   * Provides console to temporary DB.
+   */
+  public static void main(final String[] args) throws IOException {
+    final File data = new File(DATA);
+    if (!data.exists() && !data.mkdir()) {
+      throw new IOException("Can't create directory: " + data);
+    }
+    if (!data.isDirectory()) {
+      throw new IOException("Not directory: " + data);
     }
 
-    @NotNull
-    private static ByteBuffer from(@NotNull final String value) {
-        return ByteBuffer.wrap(value.getBytes(StandardCharsets.UTF_8));
-    }
+    LOG.info("Storing data in {}", data.getAbsolutePath());
+    final DAO dao = DAOFactory.create(data);
+    final String pkg = dao.getClass().getPackage().toString();
+    LOG.info(
+        "Welcome to " + pkg.substring(pkg.lastIndexOf('.') + 1) + " Key-Value DAO!"
+            + "\nSupported commands:"
+            + "\n\tget <key>"
+            + "\n\tput <key> <value>"
+            + "\n\tremove <key>"
+            + "\n\tquit");
 
-    @NotNull
-    private static String from(@NotNull final ByteBuffer value) {
-        final byte[] bytes = new byte[value.remaining()];
-        value.get(bytes);
-        return new String(bytes, StandardCharsets.UTF_8);
-    }
-
-    /**
-     * Provides console to temporary DB.
-     */
-    public static void main(final String[] args) throws IOException {
-        final File data = new File(DATA);
-        if (!data.exists() && !data.mkdir()) {
-            throw new IOException("Can't create directory: " + data);
+    try (var reader = new BufferedReader(new InputStreamReader(System.in, StandardCharsets.UTF_8))) {
+      String line;
+      while (!"quit".equals(line = reader.readLine())) {
+        if (line.isEmpty()) {
+          continue;
         }
-        if (!data.isDirectory()) {
-            throw new IOException("Not directory: " + data);
-        }
 
-        log.info("Storing data in {}", data.getAbsolutePath());
-        final DAO dao = DAOFactory.create(data);
-        final String pkg = dao.getClass().getPackage().toString();
-        log.info(
-                "Welcome to " + pkg.substring(pkg.lastIndexOf('.') + 1) + " Key-Value DAO!"
-                        + "\nSupported commands:"
-                        + "\n\tget <key>"
-                        + "\n\tput <key> <value>"
-                        + "\n\tremove <key>"
-                        + "\n\tquit");
+        final Iterator<String> tokens = Splitter.on(' ').split(line).iterator();
+        final String cmd = tokens.next();
+        final ByteBuffer key = ByteBuffer.wrap(tokens.next().getBytes(StandardCharsets.UTF_8));
 
-        try (BufferedReader reader = new BufferedReader(new InputStreamReader(System.in, StandardCharsets.UTF_8))) {
-            String line;
-            while (!"quit".equals(line = reader.readLine())) {
-                if (line.isEmpty()) {
-                    continue;
-                }
-
-                final Iterator<String> tokens = Splitter.on(' ').split(line).iterator();
-                final String cmd = tokens.next();
-                final ByteBuffer key = ByteBuffer.wrap(tokens.next().getBytes(StandardCharsets.UTF_8));
-
-                switch (cmd) {
-                    case "get":
-                        try {
-                            log.info(from(dao.get(key)));
-                        } catch (NoSuchElementException e) {
-                            log.warn("absent");
-                        } catch (IOException e) {
-                            log.error("Can't extract key: " + key, e);
-                        }
-                        break;
-
-                    case "put":
-                        dao.upsert(key, from(tokens.next()));
-                        break;
-
-                    case "remove":
-                        dao.remove(key);
-                        break;
-
-                    default:
-                        log.error("Unsupported command: {}", cmd);
-                        break; // For PMD
-                }
+        switch (cmd) {
+          case "get" -> {
+            try {
+              LOG.info(from(dao.get(key)));
+            } catch (NoSuchElementException e) {
+              LOG.warn("absent");
+            } catch (IOException e) {
+              LOG.error("Can't extract key: " + key, e);
             }
-        } finally {
-            dao.close();
+          }
+
+          case "put" -> dao.upsert(key, from(tokens.next()));
+
+          case "remove" -> dao.remove(key);
+
+          default -> LOG.error("Unsupported command: {}", cmd);
         }
+      }
+    } finally {
+      dao.close();
     }
+  }
 }

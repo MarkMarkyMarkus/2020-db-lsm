@@ -1,8 +1,12 @@
 package ru.mail.polis.markus;
 
+import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import ru.mail.polis.DAO;
+import ru.mail.polis.DaoRecord;
+
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
@@ -10,51 +14,48 @@ import java.nio.ByteBuffer;
 import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.Iterator;
 import java.util.List;
-import java.util.NoSuchElementException;
 import java.util.SortedMap;
 import java.util.TreeMap;
-import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import ru.mail.polis.DAO;
-import ru.mail.polis.DaoRecord;
 
+/**
+ * Base DAO implementation.
+ */
 public class DaoImpl implements DAO {
 
-  private final static Logger log = LoggerFactory.getLogger(DaoImpl.class);
+  private static final Logger LOG = LoggerFactory.getLogger(DaoImpl.class);
 
   private final SortedMap<ByteBuffer, ByteBuffer> dao = new TreeMap<>();
   private final File folder;
 
-  public DaoImpl(@NotNull final File data) throws IOException {
+  public DaoImpl(final File data) {
     this.folder = data;
-    loadData();
+    try {
+      loadData();
+    } catch (IOException ioe) {
+      LOG.error("Error creating DAO instance: {}", ioe.getMessage());
+    }
   }
 
   private void loadData() throws IOException {
     Files.walkFileTree(
         this.folder.toPath(),
         new SimpleFileVisitor<>() {
-          @NotNull
           @Override
-          public FileVisitResult visitFile(
-              @NotNull final Path file,
-              @NotNull final BasicFileAttributes attrs) throws IOException {
+          public FileVisitResult visitFile(final Path file, final BasicFileAttributes attrs) throws IOException {
             final var values = readFile(file);
-            values.forEach(daoRecord -> dao
-                .put(daoRecord.getKey().duplicate(), daoRecord.getValue().duplicate()));
+            values.forEach(daoRecord -> dao.put(daoRecord.getKey().duplicate(), daoRecord.getValue().duplicate()));
             return FileVisitResult.CONTINUE;
           }
         });
   }
 
   @Override
-  public @NotNull Iterator<DaoRecord> iterator(@NotNull ByteBuffer from) throws IOException {
+  public Iterator<DaoRecord> iterator(ByteBuffer from) throws IOException {
     return dao
         .tailMap(from)
         .entrySet()
@@ -64,24 +65,31 @@ public class DaoImpl implements DAO {
   }
 
   @Override
-  public @NotNull Iterator<DaoRecord> range(@NotNull ByteBuffer from, @Nullable ByteBuffer to)
+  public Iterator<DaoRecord> range(ByteBuffer from, @Nullable ByteBuffer to)
       throws IOException {
     return DAO.super.range(from, to);
   }
 
+  /**
+   * Get value by the key.
+   *
+   * @param key provided key
+   * @return value or throws {@link java.util.NoSuchElementException}
+   * @throws IOException                      on IO errors
+   * @throws java.util.NoSuchElementException if value not found
+   */
   @Override
-  public @NotNull ByteBuffer get(@NotNull ByteBuffer key)
-      throws IOException, NoSuchElementException {
+  public ByteBuffer get(ByteBuffer key) throws IOException {
     return DAO.super.get(key);
   }
 
   @Override
-  public void upsert(@NotNull ByteBuffer key, @NotNull ByteBuffer value) throws IOException {
+  public void upsert(ByteBuffer key, ByteBuffer value) throws IOException {
     dao.put(key.duplicate(), value.duplicate());
   }
 
   @Override
-  public void remove(@NotNull ByteBuffer key) throws IOException {
+  public void remove(ByteBuffer key) throws IOException {
     dao.remove(key);
   }
 
@@ -92,32 +100,28 @@ public class DaoImpl implements DAO {
 
   @Override
   public void close() throws IOException {
-    try (var objectOutputStream = new ObjectOutputStream(
-        new FileOutputStream(new File(folder, "sstable"), false)
-    )
-    ) {
+    try (var outputStream = new ObjectOutputStream(Files.newOutputStream(Paths.get(folder.getPath(), "sstable")))) {
       final var iterator = dao
           .entrySet()
           .stream()
           .map(entry -> DaoRecord.of(entry.getKey(), entry.getValue()))
           .toList();
-      objectOutputStream.writeObject(iterator);
-      objectOutputStream.flush();
+      outputStream.writeObject(iterator);
+      outputStream.flush();
     }
   }
 
   @SuppressWarnings("unchecked")
-  @NotNull
   private Iterable<DaoRecord> readFile(final Path path) {
-    try (var objectInputStream = new ObjectInputStream(new FileInputStream(path.toFile()))) {
+    try (var objectInputStream = new ObjectInputStream(Files.newInputStream(path))) {
       try {
         return (Iterable<DaoRecord>) objectInputStream.readObject();
       } catch (ClassNotFoundException | ClassCastException e) {
-        log.error("Error deserializing SSTable: ", e);
+        LOG.error("Error deserializing SSTable: ", e);
         return List.of();
       }
     } catch (IOException e) {
-      log.error("Error deserializing SSTable: ", e);
+      LOG.error("Error deserializing SSTable: ", e);
       return List.of();
     }
   }

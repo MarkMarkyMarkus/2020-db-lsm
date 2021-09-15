@@ -14,61 +14,66 @@
  * limitations under the License.
  */
 
-package ru.mail.polis;
+package ru.mail.polis.utils;
 
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.FileVisitResult;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.concurrent.atomic.AtomicLong;
-import org.jetbrains.annotations.NotNull;
 
 /**
  * Utility methods for handling files.
  *
  * @author Vadim Tsesko
  */
-final class Files {
+public final class FileUtils {
 
-  private Files() {
+  private FileUtils() {
     // Don't instantiate
   }
 
-  static void recursiveDelete(@NotNull final File path) throws IOException {
-    java.nio.file.Files.walkFileTree(
+  /**
+   * Recursively delete files and directories at the specified path.
+   *
+   * @param path path to the files
+   * @throws IOException if something went wrong
+   */
+  public static void recursiveDelete(final File path) throws IOException {
+    Files.walkFileTree(
         path.toPath(),
         new SimpleFileVisitor<>() {
-          @NotNull
           @Override
-          public FileVisitResult visitFile(
-              @NotNull final Path file,
-              @NotNull final BasicFileAttributes attrs) throws IOException {
-            java.nio.file.Files.delete(file);
+          public FileVisitResult visitFile(final Path file, final BasicFileAttributes attrs) throws IOException {
+            Files.delete(file);
             return FileVisitResult.CONTINUE;
           }
 
           @Override
-          public FileVisitResult postVisitDirectory(
-              final Path dir,
-              final IOException exc) throws IOException {
-            java.nio.file.Files.delete(dir);
+          public FileVisitResult postVisitDirectory(final Path dir, final IOException exc) throws IOException {
+            Files.delete(dir);
             return FileVisitResult.CONTINUE;
           }
         });
   }
 
-  static long directorySize(@NotNull final File path) throws IOException {
+  /**
+   * Calculate directory size.
+   *
+   * @param path path to the directory
+   * @return size of all files in the directory (in bytes)
+   * @throws IOException if something went wrong
+   */
+  public static long directorySize(final File path) throws IOException {
     final AtomicLong result = new AtomicLong(0L);
-    java.nio.file.Files.walkFileTree(
+    Files.walkFileTree(
         path.toPath(),
         new SimpleFileVisitor<>() {
-          @NotNull
           @Override
-          public FileVisitResult visitFile(
-              @NotNull final Path file,
-              @NotNull final BasicFileAttributes attrs) {
+          public FileVisitResult visitFile(final Path file, final BasicFileAttributes attrs) {
             result.addAndGet(attrs.size());
             return FileVisitResult.CONTINUE;
           }
