@@ -1,10 +1,7 @@
 package ru.mail.polis;
 
-import ru.mail.polis.markus.SerializableByteBuffer;
+import jdk.incubator.foreign.MemorySegment;
 
-import java.io.Serial;
-import java.io.Serializable;
-import java.nio.ByteBuffer;
 import java.util.Objects;
 
 /**
@@ -12,29 +9,21 @@ import java.util.Objects;
  *
  * @author Dmitry Schitinin
  */
-public class DaoRecord implements Comparable<DaoRecord>, Serializable {
+public record DaoRecord(
+    MemorySegment key,
+    MemorySegment value
+) implements Comparable<DaoRecord> {
 
-  @Serial
-  private static final long serialVersionUID = 1L;
-
-  private final SerializableByteBuffer key;
-  private final SerializableByteBuffer value;
-
-  public DaoRecord(final ByteBuffer key, final ByteBuffer value) {
-    this.key = new SerializableByteBuffer(key);
-    this.value = new SerializableByteBuffer(value);
-  }
-
-  public static DaoRecord of(final ByteBuffer key, final ByteBuffer value) {
+  public static DaoRecord of(final MemorySegment key, final MemorySegment value) {
     return new DaoRecord(key, value);
   }
 
-  public ByteBuffer getKey() {
-    return key.byteBuffer().asReadOnlyBuffer();
+  public MemorySegment getKey() {
+    return key;
   }
 
-  public ByteBuffer getValue() {
-    return value.byteBuffer().asReadOnlyBuffer();
+  public MemorySegment getValue() {
+    return value;
   }
 
   @Override
@@ -56,7 +45,8 @@ public class DaoRecord implements Comparable<DaoRecord>, Serializable {
 
   @Override
   public int compareTo(final DaoRecord other) {
-    return this.key.byteBuffer().compareTo(other.key.byteBuffer());
+    // TODO: rewrite with custom impl!
+    return this.key.asByteBuffer().compareTo(other.key.asByteBuffer());
   }
 
   @Override

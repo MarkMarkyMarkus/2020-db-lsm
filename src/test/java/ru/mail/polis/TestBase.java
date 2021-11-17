@@ -16,9 +16,9 @@
 
 package ru.mail.polis;
 
+import jdk.incubator.foreign.MemorySegment;
 import org.jetbrains.annotations.NotNull;
 
-import java.nio.ByteBuffer;
 import java.util.concurrent.ThreadLocalRandom;
 
 /**
@@ -32,31 +32,30 @@ abstract class TestBase {
   private static final int VALUE_LENGTH = 1024;
 
   @NotNull
-  static ByteBuffer randomBuffer(final int length) {
+  static MemorySegment randomBuffer(final int length) {
     assert length > 0;
     final byte[] result = new byte[length];
     ThreadLocalRandom.current().nextBytes(result);
-    return ByteBuffer.wrap(result);
+    return MemorySegment.ofArray(result);
   }
 
   @NotNull
-  static ByteBuffer randomKey() {
+  static MemorySegment randomKey() {
     return randomBuffer(KEY_LENGTH);
   }
 
   @NotNull
-  static ByteBuffer randomValue() {
+  static MemorySegment randomValue() {
     return randomBuffer(VALUE_LENGTH);
   }
 
   @NotNull
-  static ByteBuffer join(
-      @NotNull final ByteBuffer left,
-      @NotNull final ByteBuffer right) {
-    final ByteBuffer result = ByteBuffer.allocate(left.remaining() + right.remaining());
-    result.put(left.duplicate());
-    result.put(right.duplicate());
-    result.rewind();
+  static MemorySegment join(
+      @NotNull final MemorySegment left,
+      @NotNull final MemorySegment right) {
+    final var result = MemorySegment.allocateNative(left.byteSize() + right.byteSize(), left.scope());
+    result.copyFrom(left);
+    result.copyFrom(right);
     return result;
   }
 }

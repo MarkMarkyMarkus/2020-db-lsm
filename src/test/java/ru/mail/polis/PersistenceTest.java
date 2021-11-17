@@ -16,22 +16,23 @@
 
 package ru.mail.polis;
 
+import jdk.incubator.foreign.MemorySegment;
 import org.junit.jupiter.api.RepeatedTest;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import ru.mail.polis.utils.FileUtils;
 
 import java.io.File;
-import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.HashMap;
-import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Random;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Persistence tests for {@link DAO} implementations.
@@ -41,14 +42,14 @@ import static org.junit.jupiter.api.Assertions.*;
 class PersistenceTest extends TestBase {
 
   @Test
-  void fs(@TempDir File data) throws IOException {
+  void fs(@TempDir File data) throws Exception {
     // Reference key
-    final ByteBuffer key = randomKey();
+    final var key = randomKey();
 
     // Create, fill and remove storage
     try {
-      try (DAO dao = DAOFactory.create(data)) {
-        final ByteBuffer value = randomValue();
+      try (var dao = DAOFactory.create(data)) {
+        final var value = randomValue();
         dao.upsert(key, value);
         assertEquals(value, dao.get(key));
       }
@@ -59,69 +60,69 @@ class PersistenceTest extends TestBase {
     // Check that the storage is empty
     assertFalse(data.exists());
     assertTrue(data.mkdir());
-    try (DAO dao = DAOFactory.create(data)) {
+    try (var dao = DAOFactory.create(data)) {
       assertThrows(NoSuchElementException.class, () -> dao.get(key));
     }
   }
 
   @Test
-  void reopen(@TempDir File data) throws IOException {
+  void reopen(@TempDir File data) throws Exception {
     // Reference value
-    final ByteBuffer key = randomKey();
-    final ByteBuffer value = randomValue();
+    final var key = randomKey();
+    final var value = randomValue();
 
     // Create, fill and close storage
-    try (DAO dao = DAOFactory.create(data)) {
+    try (var dao = DAOFactory.create(data)) {
       dao.upsert(key, value);
       assertEquals(value, dao.get(key));
     }
 
     // Recreate dao
-    try (DAO dao = DAOFactory.create(data)) {
+    try (var dao = DAOFactory.create(data)) {
       assertEquals(value, dao.get(key));
     }
   }
 
   @Test
-  void remove(@TempDir File data) throws IOException {
+  void remove(@TempDir File data) throws Exception {
     // Reference value
-    final ByteBuffer key = randomKey();
-    final ByteBuffer value = randomValue();
+    final var key = randomKey();
+    final var value = randomValue();
 
-    // Create dao and fill data
-    try (DAO dao = DAOFactory.create(data)) {
+    // Create dao and fill values
+    try (var dao = DAOFactory.create(data)) {
       dao.upsert(key, value);
       assertEquals(value, dao.get(key));
     }
 
-    // Load data and check
-    try (DAO dao = DAOFactory.create(data)) {
+    // Load values and check
+    try (var dao = DAOFactory.create(data)) {
       assertEquals(value, dao.get(key));
 
-      // Remove data and flush
+      // Remove values and flush
       dao.remove(key);
     }
 
     // Load and check not found
-    try (DAO dao = DAOFactory.create(data)) {
+    try (var dao = DAOFactory.create(data)) {
       assertThrows(NoSuchElementException.class, () -> dao.get(key));
     }
   }
 
   @RepeatedTest(1000)
   void replaceWithClose(@TempDir File data) throws Exception {
-    final ByteBuffer key = randomKey();
-    final ByteBuffer value = randomValue();
-    final ByteBuffer value2 = randomValue();
+    final var key = randomKey();
+    final var value = randomValue();
+    final var value2 = randomValue();
 
     // Initial insert
-    try (DAO dao = DAOFactory.create(data)) {
+    try (var dao = DAOFactory.create(data)) {
       dao.upsert(key, value);
       assertEquals(value, dao.get(key));
     }
 
     // Reopen
-    try (DAO dao = DAOFactory.create(data)) {
+    try (var dao = DAOFactory.create(data)) {
       // Check and replace
       assertEquals(value, dao.get(key));
       dao.upsert(key, value2);
@@ -129,53 +130,53 @@ class PersistenceTest extends TestBase {
     }
 
     // Reopen
-    try (DAO dao = DAOFactory.create(data)) {
+    try (var dao = DAOFactory.create(data)) {
       // Last value should win
       assertEquals(value2, dao.get(key));
     }
   }
 
   @Test
-  void hugeKeys(@TempDir File data) throws IOException {
+  void hugeKeys(@TempDir File data) throws Exception {
     // Reference key
     final int size = 1024 * 1024;
-    final ByteBuffer suffix = randomBuffer(size);
-    final ByteBuffer value = randomValue();
+    final var suffix = randomBuffer(size);
+    final var value = randomValue();
     final int records = (int) (DAOFactory.MAX_HEAP / size + 1);
-    final Collection<ByteBuffer> keys = new ArrayList<>(records);
+    final var keys = new ArrayList<MemorySegment>(records);
 
     // Create, fill and close storage
-    try (DAO dao = DAOFactory.create(data)) {
+    try (var dao = DAOFactory.create(data)) {
       for (int i = 0; i < records; i++) {
-        final ByteBuffer key = randomKey();
+        final var key = randomKey();
         keys.add(key);
-        final ByteBuffer suffixed = join(key, suffix);
+        final var suffixed = join(key, suffix);
         dao.upsert(suffixed, value);
         assertEquals(value, dao.get(suffixed));
       }
     }
 
     // Recreate dao and check contents
-    try (DAO dao = DAOFactory.create(data)) {
-      for (final ByteBuffer key : keys) {
+    try (var dao = DAOFactory.create(data)) {
+      for (final var key : keys) {
         assertEquals(value, dao.get(join(key, suffix)));
       }
     }
   }
 
   @Test
-  void hugeValues(@TempDir File data) throws IOException {
+  void hugeValues(@TempDir File data) throws Exception {
     // Reference value
     final int size = 1024 * 1024;
-    final ByteBuffer suffix = randomBuffer(size);
+    final var suffix = randomBuffer(size);
     final int records = (int) (DAOFactory.MAX_HEAP / size + 1);
-    final Collection<ByteBuffer> keys = new ArrayList<>(records);
+    final var keys = new ArrayList<MemorySegment>(records);
 
     // Create, fill and close storage
-    try (DAO dao = DAOFactory.create(data)) {
+    try (var dao = DAOFactory.create(data)) {
       for (int i = 0; i < records; i++) {
-        final ByteBuffer key = randomKey();
-        final ByteBuffer value = join(key, suffix);
+        final var key = randomKey();
+        final var value = join(key, suffix);
         keys.add(key);
         dao.upsert(key, value);
         assertEquals(value, dao.get(key));
@@ -184,14 +185,14 @@ class PersistenceTest extends TestBase {
 
     // Recreate dao and check contents
     try (DAO dao = DAOFactory.create(data)) {
-      for (final ByteBuffer key : keys) {
+      for (final var key : keys) {
         assertEquals(join(key, suffix), dao.get(key));
       }
     }
   }
 
   @Test
-  void manyRecords(@TempDir File data) throws IOException {
+  void manyRecords(@TempDir File data) throws Exception {
     // Records
     final int records = 1_000_000;
     final int sampleCount = records / 1000;
@@ -199,64 +200,65 @@ class PersistenceTest extends TestBase {
     final long keySeed = System.currentTimeMillis();
     final long valueSeed = new Random(keySeed).nextLong();
 
-    final Random keys = new Random(keySeed);
-    final Random values = new Random(valueSeed);
-    final Map<Integer, Byte> samples = new HashMap<>(sampleCount);
+    final var keys = new Random(keySeed);
+    final var values = new Random(valueSeed);
+    final var samples = new HashMap<Integer, Byte>(sampleCount);
 
-    try (final DAO dao = DAOFactory.create(data)) {
+    try (final var dao = DAOFactory.create(data)) {
       // Populate (LSM is fast for writes)
       for (int i = 0; i < records; i++) {
         final int keyPayload = keys.nextInt();
-        final ByteBuffer key = ByteBuffer.allocate(Integer.BYTES);
+        final var key = ByteBuffer.allocate(Integer.BYTES);
         key.putInt(keyPayload);
         key.rewind();
 
         final byte valuePayload = (byte) values.nextInt();
-        final ByteBuffer value = ByteBuffer.allocate(Byte.BYTES);
+        final var value = ByteBuffer.allocate(Byte.BYTES);
         value.put(valuePayload);
         value.rewind();
 
-        dao.upsert(key, value);
+        // TODO: refactor me
+        dao.upsert(MemorySegment.ofByteBuffer(key), MemorySegment.ofByteBuffer(value));
 
         // store the latest value by key or update previously stored one
         if (i % sampleCount == 0 || samples.containsKey(keyPayload)) {
           samples.put(keyPayload, valuePayload);
-          assertEquals(value, dao.get(key));
+          assertEquals(MemorySegment.ofByteBuffer(value), dao.get(MemorySegment.ofByteBuffer(key)));
         }
       }
 
       // Check the contents with sampling (LSM is slow for reads)
-      for (final Map.Entry<Integer, Byte> sample : samples.entrySet()) {
-        final ByteBuffer key = ByteBuffer.allocate(Integer.BYTES);
+      for (final var sample : samples.entrySet()) {
+        final var key = ByteBuffer.allocate(Integer.BYTES);
         key.putInt(sample.getKey());
         key.rewind();
 
-        final ByteBuffer value = ByteBuffer.allocate(Byte.BYTES);
+        final var value = ByteBuffer.allocate(Byte.BYTES);
         value.put(sample.getValue());
         value.rewind();
 
-        assertEquals(value, dao.get(key));
+        assertEquals(MemorySegment.ofByteBuffer(value), dao.get(MemorySegment.ofByteBuffer(key)));
       }
     }
   }
 
   @Test
-  void burn(@TempDir File data) throws IOException {
+  void burn(@TempDir File data) throws Exception {
     // Fixed key
-    final ByteBuffer key = randomKey();
+    final var key = randomKey();
 
     // Overwrite key multiple times
     final int overwrites = 100;
     for (int i = 0; i < overwrites; i++) {
       // Overwrite
-      final ByteBuffer value = randomValue();
-      try (DAO dao = DAOFactory.create(data)) {
+      final var value = randomValue();
+      try (var dao = DAOFactory.create(data)) {
         dao.upsert(key, value);
         assertEquals(value, dao.get(key));
       }
 
       // Check
-      try (DAO dao = DAOFactory.create(data)) {
+      try (var dao = DAOFactory.create(data)) {
         assertEquals(value, dao.get(key));
       }
     }

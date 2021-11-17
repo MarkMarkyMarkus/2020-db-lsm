@@ -17,19 +17,20 @@
 package ru.mail.polis;
 
 import com.google.common.collect.Iterators;
+import jdk.incubator.foreign.MemorySegment;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import ru.mail.polis.utils.FileUtils;
 
 import java.io.File;
-import java.io.IOException;
-import java.nio.ByteBuffer;
 import java.util.Iterator;
-import java.util.Map;
-import java.util.NavigableMap;
 import java.util.NoSuchElementException;
 import java.util.TreeMap;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 /**
  * Functional unit tests for {@link DAO} implementations.
@@ -39,45 +40,44 @@ import static org.junit.jupiter.api.Assertions.*;
 class BasicTest extends TestBase {
 
   @Test
-  void empty(@TempDir File data) throws IOException {
-    try (DAO dao = DAOFactory.create(data)) {
+  void empty(@TempDir File data) throws Exception {
+    try (var dao = DAOFactory.create(data)) {
       assertThrows(NoSuchElementException.class, () -> dao.get(randomKey()));
     }
   }
 
   @Test
-  void insert(@TempDir File data) throws IOException {
-    final ByteBuffer key = randomKey();
-    final ByteBuffer value = randomValue();
-    try (DAO dao = DAOFactory.create(data)) {
+  void insert(@TempDir File data) throws Exception {
+    final var key = randomKey();
+    final var value = randomValue();
+    try (var dao = DAOFactory.create(data)) {
       dao.upsert(key, value);
       assertEquals(value, dao.get(key));
-      assertEquals(value, dao.get(key.duplicate()));
+      assertEquals(value, dao.get(FileUtils.duplicate(key)));
     }
   }
 
   @Test
-  void fullScan(@TempDir File data) throws IOException {
-    try (DAO dao = DAOFactory.create(data)) {
-      // Generate and insert data
+  void fullScan(@TempDir File data) throws Exception {
+    try (var dao = DAOFactory.create(data)) {
+      // Generate and insert values
       final int count = 10;
-      final NavigableMap<ByteBuffer, ByteBuffer> map = new TreeMap<>();
+      final var map = new TreeMap<MemorySegment, MemorySegment>(FileUtils.MEMORY_SEGMENT_COMPARATOR);
       for (int i = 0; i < count; i++) {
-        final ByteBuffer key = randomKey();
-        final ByteBuffer value = randomValue();
+        final var key = randomKey();
+        final var value = randomValue();
         dao.upsert(key, value);
         assertNull(map.put(key, value));
       }
 
-      // Check the data
-      final Iterator<Map.Entry<ByteBuffer, ByteBuffer>> expectedIter = map.entrySet()
-          .iterator();
-      final Iterator<DaoRecord> actualIter = dao.iterator(ByteBuffer.wrap(new byte[0]));
+      // Check the values
+      final var expectedIter = map.entrySet().iterator();
+      final var actualIter = dao.iterator(MemorySegment.ofArray(new byte[0]));
       while (expectedIter.hasNext()) {
-        final Map.Entry<ByteBuffer, ByteBuffer> expected = expectedIter.next();
-        final DaoRecord actual = actualIter.next();
-        final ByteBuffer expectedKey = expected.getKey();
-        final ByteBuffer actualKey = actual.getKey();
+        final var expected = expectedIter.next();
+        final var actual = actualIter.next();
+        final var expectedKey = expected.getKey();
+        final var actualKey = actual.getKey();
         assertEquals(expectedKey, actualKey);
         assertEquals(expected.getValue(), actual.getValue());
       }
@@ -86,27 +86,26 @@ class BasicTest extends TestBase {
   }
 
   @Test
-  void firstScan(@TempDir File data) throws IOException {
-    try (DAO dao = DAOFactory.create(data)) {
-      // Generate and insert data
+  void firstScan(@TempDir File data) throws Exception {
+    try (var dao = DAOFactory.create(data)) {
+      // Generate and insert values
       final int count = 10;
-      final NavigableMap<ByteBuffer, ByteBuffer> map = new TreeMap<>();
+      final var map = new TreeMap<MemorySegment, MemorySegment>(FileUtils.MEMORY_SEGMENT_COMPARATOR);
       for (int i = 0; i < count; i++) {
-        final ByteBuffer key = randomKey();
-        final ByteBuffer value = randomValue();
+        final var key = randomKey();
+        final var value = randomValue();
         dao.upsert(key, value);
         assertNull(map.put(key, value));
       }
 
-      // Check the data
-      final Iterator<Map.Entry<ByteBuffer, ByteBuffer>> expectedIter = map.entrySet()
-          .iterator();
+      // Check the values
+      final var expectedIter = map.entrySet().iterator();
       final Iterator<DaoRecord> actualIter = dao.iterator(map.firstKey());
       while (expectedIter.hasNext()) {
-        final Map.Entry<ByteBuffer, ByteBuffer> expected = expectedIter.next();
-        final DaoRecord actual = actualIter.next();
-        final ByteBuffer expectedKey = expected.getKey();
-        final ByteBuffer actualKey = actual.getKey();
+        final var expected = expectedIter.next();
+        final var actual = actualIter.next();
+        final var expectedKey = expected.getKey();
+        final var actualKey = actual.getKey();
         assertEquals(expectedKey, actualKey);
         assertEquals(expected.getValue(), actual.getValue());
       }
@@ -115,28 +114,27 @@ class BasicTest extends TestBase {
   }
 
   @Test
-  void middleScan(@TempDir File data) throws IOException {
-    try (DAO dao = DAOFactory.create(data)) {
-      // Generate and insert data
+  void middleScan(@TempDir File data) throws Exception {
+    try (var dao = DAOFactory.create(data)) {
+      // Generate and insert values
       final int count = 10;
-      final NavigableMap<ByteBuffer, ByteBuffer> map = new TreeMap<>();
+      final var map = new TreeMap<MemorySegment, MemorySegment>(FileUtils.MEMORY_SEGMENT_COMPARATOR);
       for (int i = 0; i < count; i++) {
-        final ByteBuffer key = randomKey();
-        final ByteBuffer value = randomValue();
+        final var key = randomKey();
+        final var value = randomValue();
         dao.upsert(key, value);
         assertNull(map.put(key, value));
       }
 
-      // Check the data
-      final ByteBuffer middle = Iterators.get(map.keySet().iterator(), count / 2);
-      final Iterator<Map.Entry<ByteBuffer, ByteBuffer>> expectedIter =
-          map.tailMap(middle).entrySet().iterator();
-      final Iterator<DaoRecord> actualIter = dao.iterator(middle);
+      // Check the values
+      final var middle = Iterators.get(map.keySet().iterator(), count / 2);
+      final var expectedIter = map.tailMap(middle).entrySet().iterator();
+      final var actualIter = dao.iterator(middle);
       while (expectedIter.hasNext()) {
-        final Map.Entry<ByteBuffer, ByteBuffer> expected = expectedIter.next();
-        final DaoRecord actual = actualIter.next();
-        final ByteBuffer expectedKey = expected.getKey();
-        final ByteBuffer actualKey = actual.getKey();
+        final var expected = expectedIter.next();
+        final var actual = actualIter.next();
+        final var expectedKey = expected.getKey();
+        final var actualKey = actual.getKey();
         assertEquals(expectedKey, actualKey);
         assertEquals(expected.getValue(), actual.getValue());
       }
@@ -145,19 +143,22 @@ class BasicTest extends TestBase {
   }
 
   @Test
-  void rightScan(@TempDir File data) throws IOException {
-    try (DAO dao = DAOFactory.create(data)) {
-      // Generate and insert data
+  void rightScan(@TempDir File data) throws Exception {
+    try (var dao = DAOFactory.create(data)) {
+      // Generate and insert values
       final int count = 10;
-      final NavigableMap<ByteBuffer, ByteBuffer> map = new TreeMap<>();
+      final var map = new TreeMap<MemorySegment, MemorySegment>(FileUtils.MEMORY_SEGMENT_COMPARATOR);
       for (int i = 0; i < count; i++) {
-        final ByteBuffer key = randomKey();
-        final ByteBuffer value = randomValue();
+        final var key = randomKey();
+        final var value = randomValue();
         dao.upsert(key, value);
+        System.err.println(i);
+        System.err.println(map);
+        System.err.println(key);
         assertNull(map.put(key, value));
       }
 
-      // Check the data
+      // Check the values
       final Iterator<DaoRecord> actualIter = dao.iterator(map.lastKey());
       assertEquals(map.get(map.lastKey()), actualIter.next().getValue());
       assertFalse(actualIter.hasNext());
@@ -165,48 +166,48 @@ class BasicTest extends TestBase {
   }
 
   @Test
-  void emptyValue(@TempDir File data) throws IOException {
-    final ByteBuffer key = randomKey();
-    final ByteBuffer value = ByteBuffer.allocate(0);
-    try (DAO dao = DAOFactory.create(data)) {
+  void emptyValue(@TempDir File data) throws Exception {
+    final var key = randomKey();
+    final var value = MemorySegment.ofArray(new byte[0]);
+    try (var dao = DAOFactory.create(data)) {
       dao.upsert(key, value);
       assertEquals(value, dao.get(key));
-      assertEquals(value, dao.get(key.duplicate()));
+      assertEquals(value, dao.get(FileUtils.duplicate(key)));
     }
   }
 
   @Test
-  void upsert(@TempDir File data) throws IOException {
-    final ByteBuffer key = randomKey();
-    final ByteBuffer value1 = randomValue();
-    final ByteBuffer value2 = randomValue();
-    try (DAO dao = DAOFactory.create(data)) {
+  void upsert(@TempDir File data) throws Exception {
+    final var key = randomKey();
+    final var value1 = randomValue();
+    final var value2 = randomValue();
+    try (var dao = DAOFactory.create(data)) {
       dao.upsert(key, value1);
       assertEquals(value1, dao.get(key));
-      assertEquals(value1, dao.get(key.duplicate()));
+      assertEquals(value1, dao.get(FileUtils.duplicate(key)));
       dao.upsert(key, value2);
       assertEquals(value2, dao.get(key));
-      assertEquals(value2, dao.get(key.duplicate()));
+      assertEquals(value2, dao.get(FileUtils.duplicate(key)));
     }
   }
 
   @Test
-  void remove(@TempDir File data) throws IOException {
-    final ByteBuffer key = randomKey();
-    final ByteBuffer value = randomValue();
-    try (DAO dao = DAOFactory.create(data)) {
+  void remove(@TempDir File data) throws Exception {
+    final var key = randomKey();
+    final var value = randomValue();
+    try (var dao = DAOFactory.create(data)) {
       dao.upsert(key, value);
       assertEquals(value, dao.get(key));
-      assertEquals(value, dao.get(key.duplicate()));
+      assertEquals(value, dao.get(FileUtils.duplicate(key)));
       dao.remove(key);
       assertThrows(NoSuchElementException.class, () -> dao.get(key));
     }
   }
 
   @Test
-  void removeAbsent(@TempDir File data) throws IOException {
-    final ByteBuffer key = randomKey();
-    try (DAO dao = DAOFactory.create(data)) {
+  void removeAbsent(@TempDir File data) throws Exception {
+    final var key = randomKey();
+    try (var dao = DAOFactory.create(data)) {
       dao.remove(key);
     }
   }

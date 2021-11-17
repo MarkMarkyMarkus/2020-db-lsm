@@ -12,7 +12,7 @@ plugins {
 
 java {
     toolchain {
-        languageVersion.set(JavaLanguageVersion.of(16))
+        languageVersion.set(JavaLanguageVersion.of(17))
     }
     modularity.inferModulePath.set(false)
 }
@@ -64,7 +64,8 @@ application {
 // Fail on warnings
 tasks.withType<JavaCompile> {
     val compilerArgs = options.compilerArgs
-    compilerArgs.add("-Werror")
+//    Disabled since we use JEP 383 which is currently in "incubator".
+//    compilerArgs.add("-Werror")
     compilerArgs.add("-Xlint:all")
     compilerArgs.add("-Xlint:-requires-automatic")
 }

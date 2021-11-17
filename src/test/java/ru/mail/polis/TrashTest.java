@@ -1,19 +1,21 @@
 package ru.mail.polis;
 
+import jdk.incubator.foreign.MemorySegment;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import ru.mail.polis.utils.FileUtils;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Checks ignoring trash files in persistent data directory.
+ * Checks ignoring trash files in persistent values directory.
  *
  * @author Dmitry Schitinin
  */
@@ -34,24 +36,24 @@ class TrashTest extends TestBase {
   private static void createTrashFile(
       final File dir,
       final String name,
-      final ByteBuffer content) throws IOException {
-    try (final FileChannel ch =
-        FileChannel.open(
-            Paths.get(dir.getAbsolutePath(), name),
-            StandardOpenOption.CREATE,
-            StandardOpenOption.WRITE)) {
-      ch.write(content);
+      final MemorySegment content) throws IOException {
+    try (var ch =
+             FileChannel.open(
+                 Paths.get(dir.getAbsolutePath(), name),
+                 StandardOpenOption.CREATE,
+                 StandardOpenOption.WRITE)) {
+      FileUtils.writeToChannel(ch, content);
     }
   }
 
   @Test
-  void ignoreEmptyTrashFiles(@TempDir File data) throws IOException {
+  void ignoreEmptyTrashFiles(@TempDir File data) throws Exception {
     // Reference value
-    final ByteBuffer key = randomKey();
-    final ByteBuffer value = randomValue();
+    final var key = randomKey();
+    final var value = randomValue();
 
-    // Create dao and fill data
-    try (DAO dao = DAOFactory.create(data)) {
+    // Create dao and fill values
+    try (var dao = DAOFactory.create(data)) {
       dao.upsert(key, value);
     }
 
@@ -64,19 +66,19 @@ class TrashTest extends TestBase {
     createTrashFile(data, "trash123.dat");
 
     // Load and check stored value
-    try (DAO dao = DAOFactory.create(data)) {
+    try (var dao = DAOFactory.create(data)) {
       assertEquals(value, dao.get(key));
     }
   }
 
   @Test
-  void ignoreTrashDirectories(@TempDir File data) throws IOException {
+  void ignoreTrashDirectories(@TempDir File data) throws Exception {
     // Reference value
-    final ByteBuffer key = randomKey();
-    final ByteBuffer value = randomValue();
+    final var key = randomKey();
+    final var value = randomValue();
 
-    // Create dao and fill data
-    try (DAO dao = DAOFactory.create(data)) {
+    // Create dao and fill values
+    try (var dao = DAOFactory.create(data)) {
       dao.upsert(key, value);
     }
 
@@ -87,19 +89,19 @@ class TrashTest extends TestBase {
     createTrashDirectory(data, "trash.db");
 
     // Load and check stored value
-    try (DAO dao = DAOFactory.create(data)) {
+    try (var dao = DAOFactory.create(data)) {
       assertEquals(value, dao.get(key));
     }
   }
 
   @Test
-  void ignoreNonEmptyTrashFiles(@TempDir File data) throws IOException {
+  void ignoreNonEmptyTrashFiles(@TempDir File data) throws Exception {
     // Reference value
-    final ByteBuffer key = randomKey();
-    final ByteBuffer value = randomValue();
+    final var key = randomKey();
+    final var value = randomValue();
 
-    // Create dao and fill data
-    try (DAO dao = DAOFactory.create(data)) {
+    // Create dao and fill values
+    try (var dao = DAOFactory.create(data)) {
       dao.upsert(key, value);
     }
 
@@ -110,7 +112,7 @@ class TrashTest extends TestBase {
     createTrashFile(data, "trash.db", randomValue());
 
     // Load and check stored value
-    try (DAO dao = DAOFactory.create(data)) {
+    try (var dao = DAOFactory.create(data)) {
       assertEquals(value, dao.get(key));
     }
   }

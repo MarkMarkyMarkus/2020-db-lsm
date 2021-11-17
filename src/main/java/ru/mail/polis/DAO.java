@@ -16,12 +16,12 @@
 
 package ru.mail.polis;
 
+import jdk.incubator.foreign.MemorySegment;
 import org.jetbrains.annotations.Nullable;
+import ru.mail.polis.utils.FileUtils;
 import ru.mail.polis.utils.IterUtils;
 
-import java.io.Closeable;
 import java.io.IOException;
-import java.nio.ByteBuffer;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 
@@ -31,30 +31,30 @@ import java.util.NoSuchElementException;
  * @author Vadim Tsesko
  * @author Dmitry Schitinin
  */
-public interface DAO extends Closeable {
+public interface DAO extends AutoCloseable {
 
   /**
    * Provides iterator (possibly empty) over {@link DaoRecord}s starting at "from" key (inclusive) in <b>ascending</b>
    * order according to {@link DaoRecord#compareTo(DaoRecord)}. N.B. The iterator should be obtained as fast as
    * possible, e.g. one should not "seek" to start point ("from" element) in linear time ;)
    */
-  Iterator<DaoRecord> iterator(ByteBuffer from) throws IOException;
+  Iterator<DaoRecord> iterator(MemorySegment from) throws IOException;
 
   /**
    * Provides iterator (possibly empty) over {@link DaoRecord}s starting at "from" key (inclusive) until given "to" key
    * (exclusive) in <b>ascending</b> order according to {@link DaoRecord#compareTo(DaoRecord)}. N.B. The iterator should
    * be obtained as fast as possible, e.g. one should not "seek" to start point ("from" element) in linear time ;)
    */
-  default Iterator<DaoRecord> range(ByteBuffer from, @Nullable ByteBuffer to) throws IOException {
+  default Iterator<DaoRecord> range(MemorySegment from, @Nullable MemorySegment to) throws IOException {
     if (to == null) {
       return iterator(from);
     }
 
-    if (from.compareTo(to) > 0) {
+    if (FileUtils.MEMORY_SEGMENT_COMPARATOR.compare(from, to) > 0) {
       return IterUtils.empty();
     }
 
-    final DaoRecord bound = new DaoRecord(to, ByteBuffer.allocate(0));
+    final DaoRecord bound = new DaoRecord(to, FileUtils.EMPTY_MEMORY_SEGMENT);
     return IterUtils.until(iterator(from), bound);
   }
 
@@ -63,7 +63,7 @@ public interface DAO extends Closeable {
    *
    * @throws NoSuchElementException if no such record
    */
-  default ByteBuffer get(ByteBuffer key) throws IOException {
+  default MemorySegment get(MemorySegment key) throws IOException {
     final Iterator<DaoRecord> iter = iterator(key);
     if (!iter.hasNext()) {
       throw new NoSuchElementException("Not found");
@@ -79,17 +79,15 @@ public interface DAO extends Closeable {
   /**
    * Inserts or updates value by given key.
    */
-  void upsert(ByteBuffer key, ByteBuffer value) throws IOException;
+  void upsert(MemorySegment key, MemorySegment value) throws IOException;
 
   /**
    * Removes value by given key.
    */
-  void remove(ByteBuffer key) throws IOException;
+  void remove(MemorySegment key) throws IOException;
 
   /**
    * Perform compaction.
    */
-  default void compact() throws IOException {
-    // Implement me when you get to stage 3
-  }
+  void compact() throws IOException;
 }

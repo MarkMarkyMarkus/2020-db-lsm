@@ -17,6 +17,7 @@
 package ru.mail.polis;
 
 import com.google.common.base.Splitter;
+import jdk.incubator.foreign.MemorySegment;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -24,9 +25,7 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
-import java.util.Iterator;
 import java.util.NoSuchElementException;
 
 /**
@@ -43,21 +42,19 @@ public final class Client {
     // Not instantiable
   }
 
-  private static ByteBuffer from(final String value) {
-    return ByteBuffer.wrap(value.getBytes(StandardCharsets.UTF_8));
+  private static MemorySegment from(final String value) {
+    return MemorySegment.ofArray(value.getBytes(StandardCharsets.UTF_8));
   }
 
-  private static String from(final ByteBuffer value) {
-    final byte[] bytes = new byte[value.remaining()];
-    value.get(bytes);
-    return new String(bytes, StandardCharsets.UTF_8);
+  private static String from(final MemorySegment value) {
+    return new String(value.toByteArray(), StandardCharsets.UTF_8);
   }
 
   /**
    * Provides console to temporary DB.
    */
-  public static void main(final String[] args) throws IOException {
-    final File data = new File(DATA);
+  public static void main(final String[] args) throws Exception {
+    final var data = new File(DATA);
     if (!data.exists() && !data.mkdir()) {
       throw new IOException("Can't create directory: " + data);
     }
@@ -65,9 +62,9 @@ public final class Client {
       throw new IOException("Not directory: " + data);
     }
 
-    LOG.info("Storing data in {}", data.getAbsolutePath());
-    final DAO dao = DAOFactory.create(data);
-    final String pkg = dao.getClass().getPackage().toString();
+    LOG.info("Storing values in {}", data.getAbsolutePath());
+    final var dao = DAOFactory.create(data);
+    final var pkg = dao.getClass().getPackage().toString();
     LOG.info(
         "Welcome to " + pkg.substring(pkg.lastIndexOf('.') + 1) + " Key-Value DAO!"
             + "\nSupported commands:"
@@ -83,9 +80,9 @@ public final class Client {
           continue;
         }
 
-        final Iterator<String> tokens = Splitter.on(' ').split(line).iterator();
-        final String cmd = tokens.next();
-        final ByteBuffer key = ByteBuffer.wrap(tokens.next().getBytes(StandardCharsets.UTF_8));
+        final var tokens = Splitter.on(' ').split(line).iterator();
+        final var cmd = tokens.next();
+        final var key = MemorySegment.ofArray(tokens.next().getBytes(StandardCharsets.UTF_8));
 
         switch (cmd) {
           case "get" -> {

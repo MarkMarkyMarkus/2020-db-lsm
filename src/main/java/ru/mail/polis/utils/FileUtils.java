@@ -16,14 +16,21 @@
 
 package ru.mail.polis.utils;
 
+import jdk.incubator.foreign.MemorySegment;
+import jdk.incubator.foreign.ResourceScope;
+
 import java.io.File;
 import java.io.IOException;
+import java.nio.channels.FileChannel;
 import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
+import java.util.Comparator;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.stream.LongStream;
+import java.util.stream.Stream;
 
 /**
  * Utility methods for handling files.
@@ -31,6 +38,11 @@ import java.util.concurrent.atomic.AtomicLong;
  * @author Vadim Tsesko
  */
 public final class FileUtils {
+  public static Comparator<MemorySegment> MEMORY_SEGMENT_COMPARATOR = Comparator
+      .comparingLong(MemorySegment::byteSize)
+      .thenComparingLong(MemorySegment::hashCode); // TODO: fix casting to INT
+
+  public static MemorySegment EMPTY_MEMORY_SEGMENT = MemorySegment.allocateNative(1L, ResourceScope.globalScope());
 
   private FileUtils() {
     // Don't instantiate
@@ -79,5 +91,52 @@ public final class FileUtils {
           }
         });
     return result.get();
+  }
+
+  /**
+   * Split {@link MemorySegment} to several parts
+   * if the size of the original memory segment is more then {@link Integer#MAX_VALUE}.
+   *
+   * @param segment original {@link MemorySegment}.
+   * @return {@link Stream} of memory segments each size not greater than {@link Integer#MAX_VALUE}.
+   */
+  public static Stream<MemorySegment> slicedMemorySegment(final MemorySegment segment) {
+    final var size = segment.byteSize();
+
+    if (size < Integer.MAX_VALUE) {
+      return Stream.of(segment);
+    } else {
+      return LongStream
+          .iterate(0, i -> i < size, i -> i + Integer.MAX_VALUE)
+          .mapToObj(i -> {
+            if (i < size) {
+              return segment.asSlice(i, Integer.MAX_VALUE);
+            } else {
+              return segment.asSlice(i);
+            }
+          });
+    }
+  }
+
+  public static void writeToChannel(final FileChannel channel, final MemorySegment memorySegment) {
+    slicedMemorySegment(memorySegment).forEach(ms -> {
+      try {
+        channel.write(ms.asByteBuffer());
+      } catch (IOException e) {
+        System.err.println(e.getMessage());
+      }
+    });
+  }
+
+  /**
+   * Create a new copy of {@link MemorySegment}.
+   *
+   * @param source original {@link MemorySegment}.
+   * @return copy of original {@link MemorySegment}.
+   */
+  public static MemorySegment duplicate(final MemorySegment source) {
+    final var copy = MemorySegment.allocateNative(source.byteSize(), source.scope());
+    copy.copyFrom(source);
+    return copy;
   }
 }

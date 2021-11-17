@@ -3,14 +3,13 @@ package ru.mail.polis;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.opentest4j.AssertionFailedError;
+import ru.mail.polis.utils.FileUtils;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.util.Iterator;
 import java.util.stream.Stream;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 
 /**
  * Generates a lot of tombstones and ensures that resulted DAO is empty.
@@ -22,10 +21,10 @@ class AllDeadTest extends TestBase {
   private static final int TOMBSTONES_COUNT = 1000000;
 
   @Test
-  void deadAll(@TempDir File data) throws IOException {
+  void deadAll(@TempDir File data) throws Exception {
     // Create, fill, read and remove
-    try (DAO dao = DAOFactory.create(data)) {
-      final Iterator<ByteBuffer> tombstones =
+    try (var dao = DAOFactory.create(data)) {
+      final var tombstones =
           Stream.generate(TestBase::randomKey)
               .limit(TOMBSTONES_COUNT)
               .iterator();
@@ -38,8 +37,8 @@ class AllDeadTest extends TestBase {
       }
 
       // Check contents
-      final Iterator<DaoRecord> empty = dao.iterator(ByteBuffer.allocate(0));
-      assertFalse(empty.hasNext());
+      final var emptyIterator = dao.iterator(FileUtils.EMPTY_MEMORY_SEGMENT);
+      assertFalse(emptyIterator.hasNext());
     }
   }
 }

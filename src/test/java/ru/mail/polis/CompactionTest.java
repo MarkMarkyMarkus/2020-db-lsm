@@ -16,18 +16,18 @@
 
 package ru.mail.polis;
 
+import jdk.incubator.foreign.MemorySegment;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import ru.mail.polis.utils.FileUtils;
 
 import java.io.File;
-import java.io.IOException;
-import java.nio.ByteBuffer;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.NoSuchElementException;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Compaction tests for {@link DAO} implementations.
@@ -37,30 +37,30 @@ import static org.junit.jupiter.api.Assertions.*;
 class CompactionTest extends TestBase {
 
   @Test
-  void overwrite(@TempDir File data) throws IOException {
+  void overwrite(@TempDir File data) throws Exception {
     // Reference value
     final int valueSize = 1024 * 1024;
     final int keyCount = 10;
     final int overwrites = 10;
 
-    final ByteBuffer value = randomBuffer(valueSize);
-    final Collection<ByteBuffer> keys = new ArrayList<>(keyCount);
+    final var value = randomBuffer(valueSize);
+    final var keys = new ArrayList<MemorySegment>(keyCount);
     for (int i = 0; i < keyCount; i++) {
       keys.add(randomKey());
     }
 
     // Overwrite keys several times each time closing DAO
     for (int round = 0; round < overwrites; round++) {
-      try (DAO dao = DAOFactory.create(data)) {
-        for (final ByteBuffer key : keys) {
+      try (var dao = DAOFactory.create(data)) {
+        for (final var key : keys) {
           dao.upsert(key, join(key, value));
         }
       }
     }
 
     // Check the contents
-    try (DAO dao = DAOFactory.create(data)) {
-      for (final ByteBuffer key : keys) {
+    try (var dao = DAOFactory.create(data)) {
+      for (final var key : keys) {
         assertEquals(join(key, value), dao.get(key));
       }
 
@@ -68,7 +68,7 @@ class CompactionTest extends TestBase {
       dao.compact();
 
       // Check the contents
-      for (final ByteBuffer key : keys) {
+      for (final var key : keys) {
         assertEquals(join(key, value), dao.get(key));
       }
     }
@@ -83,25 +83,25 @@ class CompactionTest extends TestBase {
   }
 
   @Test
-  void multiple(@TempDir File data) throws IOException {
+  void multiple(@TempDir File data) throws Exception {
     // Reference value
     final int valueSize = 1024 * 1024;
     final int keyCount = 10;
     final int overwrites = 10;
 
-    final Collection<ByteBuffer> keys = new ArrayList<>(keyCount);
+    final var keys = new ArrayList<MemorySegment>(keyCount);
     for (int i = 0; i < keyCount; i++) {
       keys.add(randomKey());
     }
 
     // Overwrite keys multiple times with intermediate compactions
-    try (DAO dao = DAOFactory.create(data)) {
+    try (var dao = DAOFactory.create(data)) {
       for (int round = 0; round < overwrites; round++) {
         // New version
-        final ByteBuffer value = randomBuffer(valueSize);
+        final var value = randomBuffer(valueSize);
 
         // Overwrite
-        for (final ByteBuffer key : keys) {
+        for (final var key : keys) {
           dao.upsert(key, join(key, value));
         }
 
@@ -109,7 +109,7 @@ class CompactionTest extends TestBase {
         dao.compact();
 
         // Check the contents
-        for (final ByteBuffer key : keys) {
+        for (final var key : keys) {
           assertEquals(join(key, value), dao.get(key));
         }
       }
@@ -125,44 +125,44 @@ class CompactionTest extends TestBase {
   }
 
   @Test
-  void clear(@TempDir File data) throws IOException {
+  void clear(@TempDir File data) throws Exception {
     // Reference value
     final int valueSize = 1024 * 1024;
     final int keyCount = 10;
 
-    final ByteBuffer value = randomBuffer(valueSize);
-    final Collection<ByteBuffer> keys = new ArrayList<>(keyCount);
+    final var value = randomBuffer(valueSize);
+    final var keys = new ArrayList<MemorySegment>(keyCount);
     for (int i = 0; i < keyCount; i++) {
       keys.add(randomKey());
     }
 
     // Insert keys
-    try (DAO dao = DAOFactory.create(data)) {
-      for (final ByteBuffer key : keys) {
+    try (var dao = DAOFactory.create(data)) {
+      for (final var key : keys) {
         dao.upsert(key, join(key, value));
       }
     }
 
     // Check the contents
-    try (DAO dao = DAOFactory.create(data)) {
-      for (final ByteBuffer key : keys) {
+    try (var dao = DAOFactory.create(data)) {
+      for (final var key : keys) {
         assertEquals(join(key, value), dao.get(key));
       }
 
       // Remove keys
-      for (final ByteBuffer key : keys) {
+      for (final var key : keys) {
         dao.remove(key);
       }
     }
 
     // Compact
-    try (DAO dao = DAOFactory.create(data)) {
+    try (var dao = DAOFactory.create(data)) {
       dao.compact();
     }
 
     // Check the contents
-    try (DAO dao = DAOFactory.create(data)) {
-      for (final ByteBuffer key : keys) {
+    try (var dao = DAOFactory.create(data)) {
+      for (final var key : keys) {
         assertThrows(NoSuchElementException.class, () -> dao.get(key));
       }
     }

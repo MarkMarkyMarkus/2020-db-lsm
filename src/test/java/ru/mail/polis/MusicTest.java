@@ -2,16 +2,15 @@ package ru.mail.polis;
 
 import com.google.common.base.Charsets;
 import com.google.common.collect.Iterators;
+import jdk.incubator.foreign.MemorySegment;
 import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import java.io.File;
-import java.io.IOException;
-import java.nio.ByteBuffer;
 import java.util.Arrays;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * Music database over {@link DAO}.
@@ -23,58 +22,59 @@ class MusicTest extends TestBase {
   private static final String DELIMITER = ":";
 
   @NotNull
-  private static ByteBuffer artistFrom(
+  private static MemorySegment artistFrom(
       @NotNull final String artist) {
     assert !artist.contains(DELIMITER);
-    return ByteBuffer.wrap((artist + DELIMITER).getBytes(Charsets.UTF_8));
+    return MemorySegment.ofArray((artist + DELIMITER).getBytes(Charsets.UTF_8));
   }
 
   @NotNull
-  private static ByteBuffer albumFrom(
+  private static MemorySegment albumFrom(
       @NotNull final String artist,
       @NotNull final String album) {
     assert !artist.contains(DELIMITER);
     assert !album.contains(DELIMITER);
-    return ByteBuffer.wrap((artist + DELIMITER + album + DELIMITER).getBytes(Charsets.UTF_8));
+    return MemorySegment.ofArray((artist + DELIMITER + album + DELIMITER).getBytes(Charsets.UTF_8));
   }
 
   @NotNull
-  private static ByteBuffer trackFrom(
+  private static MemorySegment trackFrom(
       @NotNull final String artist,
       @NotNull final String album,
       @NotNull final String track) {
     assert !artist.contains(DELIMITER);
     assert !album.contains(DELIMITER);
     assert !track.contains(DELIMITER);
-    return ByteBuffer.wrap(
+    return MemorySegment.ofArray(
         (artist + DELIMITER + album + DELIMITER + track).getBytes(Charsets.UTF_8));
   }
 
   @NotNull
-  private static ByteBuffer from(final int... bytes) {
+  private static MemorySegment from(final int... bytes) {
     assert Arrays.stream(bytes).allMatch(b -> Byte.MIN_VALUE <= b && b <= Byte.MAX_VALUE);
     final byte[] buffer = new byte[bytes.length];
     for (int i = 0; i < buffer.length; i++) {
       buffer[i] = (byte) bytes[i];
     }
-    return ByteBuffer.wrap(buffer);
+    return MemorySegment.ofArray(buffer);
   }
 
   @NotNull
-  private static ByteBuffer next(@NotNull final ByteBuffer buffer) {
+  private static MemorySegment next(@NotNull final MemorySegment buffer) {
+    final var bb = buffer.asByteBuffer();
     boolean ones = true;
-    for (int i = 0; i < buffer.remaining(); i++) {
-      if (buffer.get(i) != Byte.MAX_VALUE) {
+    for (int i = 0; i < bb.remaining(); i++) {
+      if (bb.get(i) != Byte.MAX_VALUE) {
         ones = false;
         break;
       }
     }
 
-    final byte[] next = new byte[buffer.remaining() + (ones ? 1 : 0)];
+    final byte[] next = new byte[bb.remaining() + (ones ? 1 : 0)];
     int j = next.length - 1;
     int carry = 1;
-    for (int i = buffer.remaining() - 1; i >= 0; i--, j--) {
-      final int b = buffer.get(i);
+    for (int i = bb.remaining() - 1; i >= 0; i--, j--) {
+      final int b = bb.get(i);
       final int sum = b + carry;
       final byte v;
       if (sum > Byte.MAX_VALUE) {
@@ -91,7 +91,7 @@ class MusicTest extends TestBase {
       next[0] = (byte) carry;
     }
 
-    return ByteBuffer.wrap(next);
+    return MemorySegment.ofArray(next);
   }
 
   @Test
@@ -105,9 +105,9 @@ class MusicTest extends TestBase {
   }
 
   @Test
-  void database(@TempDir File data) throws IOException {
+  void database(@TempDir File data) throws Exception {
     // Fill music database
-    try (DAO dao = DAOFactory.create(data)) {
+    try (var dao = DAOFactory.create(data)) {
       dao.upsert(trackFrom("Ar1", "Al11", "T111"), randomValue());
       dao.upsert(trackFrom("Ar1", "Al11", "T112"), randomValue());
       dao.upsert(trackFrom("Ar1", "Al12", "T111"), randomValue());
@@ -118,7 +118,7 @@ class MusicTest extends TestBase {
     }
 
     // Open music database
-    try (DAO dao = DAOFactory.create(data)) {
+    try (var dao = DAOFactory.create(data)) {
       // Artists
       assertEquals(5, Iterators.size(dao.range(artistFrom("Ar1"), next(artistFrom("Ar1")))));
       assertEquals(2, Iterators.size(dao.range(artistFrom("Ar2"), next(artistFrom("Ar2")))));

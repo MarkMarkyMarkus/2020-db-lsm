@@ -1,11 +1,14 @@
 package ru.mail.polis;
 
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterators;
 import org.junit.jupiter.api.Test;
 import ru.mail.polis.utils.IterUtils;
 
-import static org.junit.jupiter.api.Assertions.*;
+import java.util.Arrays;
+import java.util.List;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 
 /**
  * Unit tests for {@link IterUtils} facilities.
@@ -18,7 +21,7 @@ class IterUtilsTest {
   void until() {
     assertFalse(IterUtils.until(IterUtils.empty(), 0).hasNext());
 
-    final ImmutableList<Integer> sixNumbers = ImmutableList.of(1, 2, 3, 4, 5, 6);
+    final var sixNumbers = List.of(1, 2, 3, 4, 5, 6);
 
     assertFalse(IterUtils.until(sixNumbers.iterator(), 0).hasNext());
 
@@ -32,12 +35,11 @@ class IterUtilsTest {
   void collapseEquals() {
     assertFalse(IterUtils.collapseEquals(IterUtils.empty()).hasNext());
 
-    final Integer[] collapsed = Iterators.toArray(
-        IterUtils.collapseEquals(
-            ImmutableList.of(1, 1, 2, 3, 3, 5, 6).iterator()),
+    final var collapsed = Iterators.toArray(
+        IterUtils.collapseEquals(List.of(1, 1, 2, 3, 3, 5, 6).iterator()),
         Integer.class);
     assertEquals(
-        ImmutableList.of(1, 2, 3, 5, 6),
-        ImmutableList.copyOf(collapsed));
+        List.of(1, 2, 3, 5, 6),
+        Arrays.stream(collapsed).toList());
   }
 }

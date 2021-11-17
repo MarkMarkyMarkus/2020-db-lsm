@@ -17,7 +17,7 @@
 package ru.mail.polis;
 
 import org.jetbrains.annotations.NotNull;
-import ru.mail.polis.markus.DaoImpl;
+import ru.mail.polis.markus.LsmDao;
 
 import java.io.File;
 import java.io.IOException;
@@ -38,7 +38,7 @@ public final class DAOFactory {
   /**
    * Construct a {@link DAO} instance.
    *
-   * @param data local disk folder to persist the data to
+   * @param data local disk folder to saveToDisk the values to
    * @return a storage instance
    */
   @NotNull
@@ -55,6 +55,6 @@ public final class DAOFactory {
       throw new IllegalArgumentException("Path is not a directory: " + data);
     }
 
-    return new DaoImpl(data);
+    return new LsmDao(new Config());
   }
 }
