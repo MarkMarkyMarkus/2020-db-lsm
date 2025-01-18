@@ -16,20 +16,19 @@
 
 package ru.mail.polis;
 
-import jdk.incubator.foreign.MemorySegment;
 import org.junit.jupiter.api.RepeatedTest;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import ru.mail.polis.utils.FileUtils;
 
 import java.io.File;
-import java.nio.ByteBuffer;
+import java.lang.foreign.MemorySegment;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.NoSuchElementException;
-import java.util.Random;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -41,6 +40,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  */
 class PersistenceTest extends TestBase {
 
+  private static final Logger log = LoggerFactory.getLogger(PersistenceTest.class);
+
   @Test
   void fs(@TempDir File data) throws Exception {
     // Reference key
@@ -51,7 +52,7 @@ class PersistenceTest extends TestBase {
       try (var dao = DAOFactory.create(data)) {
         final var value = randomValue();
         dao.upsert(key, value);
-        assertEquals(value, dao.get(key));
+        assertEqualsOfMemorySegments(value, dao.get(key));
       }
     } finally {
       FileUtils.recursiveDelete(data);
@@ -74,12 +75,12 @@ class PersistenceTest extends TestBase {
     // Create, fill and close storage
     try (var dao = DAOFactory.create(data)) {
       dao.upsert(key, value);
-      assertEquals(value, dao.get(key));
+      assertEqualsOfMemorySegments(value, dao.get(key));
     }
 
     // Recreate dao
     try (var dao = DAOFactory.create(data)) {
-      assertEquals(value, dao.get(key));
+      assertEqualsOfMemorySegments(value, dao.get(key));
     }
   }
 
@@ -92,12 +93,12 @@ class PersistenceTest extends TestBase {
     // Create dao and fill values
     try (var dao = DAOFactory.create(data)) {
       dao.upsert(key, value);
-      assertEquals(value, dao.get(key));
+      assertEqualsOfMemorySegments(value, dao.get(key));
     }
 
     // Load values and check
     try (var dao = DAOFactory.create(data)) {
-      assertEquals(value, dao.get(key));
+      assertEqualsOfMemorySegments(value, dao.get(key));
 
       // Remove values and flush
       dao.remove(key);
@@ -118,21 +119,21 @@ class PersistenceTest extends TestBase {
     // Initial insert
     try (var dao = DAOFactory.create(data)) {
       dao.upsert(key, value);
-      assertEquals(value, dao.get(key));
+      assertEqualsOfMemorySegments(value, dao.get(key));
     }
 
     // Reopen
     try (var dao = DAOFactory.create(data)) {
       // Check and replace
-      assertEquals(value, dao.get(key));
+      assertEqualsOfMemorySegments(value, dao.get(key));
       dao.upsert(key, value2);
-      assertEquals(value2, dao.get(key));
+      assertEqualsOfMemorySegments(value2, dao.get(key));
     }
 
     // Reopen
     try (var dao = DAOFactory.create(data)) {
       // Last value should win
-      assertEquals(value2, dao.get(key));
+      assertEqualsOfMemorySegments(value2, dao.get(key));
     }
   }
 
@@ -152,14 +153,14 @@ class PersistenceTest extends TestBase {
         keys.add(key);
         final var suffixed = join(key, suffix);
         dao.upsert(suffixed, value);
-        assertEquals(value, dao.get(suffixed));
+        assertEqualsOfMemorySegments(value, dao.get(suffixed));
       }
     }
 
     // Recreate dao and check contents
     try (var dao = DAOFactory.create(data)) {
-      for (final var key : keys) {
-        assertEquals(value, dao.get(join(key, suffix)));
+      for (MemorySegment key : keys) {
+        assertEqualsOfMemorySegments(value, dao.get(join(key, suffix)));
       }
     }
   }
@@ -179,14 +180,14 @@ class PersistenceTest extends TestBase {
         final var value = join(key, suffix);
         keys.add(key);
         dao.upsert(key, value);
-        assertEquals(value, dao.get(key));
+        assertEqualsOfMemorySegments(value, dao.get(key));
       }
     }
 
     // Recreate dao and check contents
     try (DAO dao = DAOFactory.create(data)) {
       for (final var key : keys) {
-        assertEquals(join(key, suffix), dao.get(key));
+        assertEqualsOfMemorySegments(join(key, suffix), dao.get(key));
       }
     }
   }
@@ -196,48 +197,28 @@ class PersistenceTest extends TestBase {
     // Records
     final int records = 1_000_000;
     final int sampleCount = records / 1000;
-
-    final long keySeed = System.currentTimeMillis();
-    final long valueSeed = new Random(keySeed).nextLong();
-
-    final var keys = new Random(keySeed);
-    final var values = new Random(valueSeed);
-    final var samples = new HashMap<Integer, Byte>(sampleCount);
+    final var samples = new HashMap<MemorySegment, MemorySegment>(sampleCount);
 
     try (final var dao = DAOFactory.create(data)) {
       // Populate (LSM is fast for writes)
       for (int i = 0; i < records; i++) {
-        final int keyPayload = keys.nextInt();
-        final var key = ByteBuffer.allocate(Integer.BYTES);
-        key.putInt(keyPayload);
-        key.rewind();
+        final var key = randomBuffer(4);
+        final var value = randomBuffer(1);
 
-        final byte valuePayload = (byte) values.nextInt();
-        final var value = ByteBuffer.allocate(Byte.BYTES);
-        value.put(valuePayload);
-        value.rewind();
-
-        // TODO: refactor me
-        dao.upsert(MemorySegment.ofByteBuffer(key), MemorySegment.ofByteBuffer(value));
+        dao.upsert(key, value);
 
         // store the latest value by key or update previously stored one
-        if (i % sampleCount == 0 || samples.containsKey(keyPayload)) {
-          samples.put(keyPayload, valuePayload);
-          assertEquals(MemorySegment.ofByteBuffer(value), dao.get(MemorySegment.ofByteBuffer(key)));
+        if (i % sampleCount == 0 || samples.containsKey(key)) {
+          samples.put(key, value);
+          assertEqualsOfMemorySegments(value, dao.get(key));
         }
       }
 
       // Check the contents with sampling (LSM is slow for reads)
       for (final var sample : samples.entrySet()) {
-        final var key = ByteBuffer.allocate(Integer.BYTES);
-        key.putInt(sample.getKey());
-        key.rewind();
-
-        final var value = ByteBuffer.allocate(Byte.BYTES);
-        value.put(sample.getValue());
-        value.rewind();
-
-        assertEquals(MemorySegment.ofByteBuffer(value), dao.get(MemorySegment.ofByteBuffer(key)));
+        final var key = sample.getKey();
+        final var value = sample.getValue();
+        assertEqualsOfMemorySegments(value, dao.get(key));
       }
     }
   }
@@ -254,12 +235,12 @@ class PersistenceTest extends TestBase {
       final var value = randomValue();
       try (var dao = DAOFactory.create(data)) {
         dao.upsert(key, value);
-        assertEquals(value, dao.get(key));
+        assertEqualsOfMemorySegments(value, dao.get(key));
       }
 
       // Check
       try (var dao = DAOFactory.create(data)) {
-        assertEquals(value, dao.get(key));
+        assertEqualsOfMemorySegments(value, dao.get(key));
       }
     }
   }

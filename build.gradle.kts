@@ -1,18 +1,19 @@
 import net.ltgt.gradle.errorprone.errorprone
+import org.gradle.api.tasks.testing.logging.TestExceptionFormat
 
 plugins {
     java
     application
     checkstyle
     pmd
-    id("net.ltgt.errorprone") version "2.0.2"
-    id("com.github.spotbugs") version "4.7.5"
-    id("org.javamodularity.moduleplugin") version "1.8.9"
+    id("net.ltgt.errorprone") version "4.1.0"
+    id("com.github.spotbugs") version "6.0.27"
+    id("org.javamodularity.moduleplugin") version "1.8.15"
 }
 
 java {
     toolchain {
-        languageVersion.set(JavaLanguageVersion.of(17))
+        languageVersion.set(JavaLanguageVersion.of(23))
     }
     modularity.inferModulePath.set(false)
 }
@@ -23,23 +24,25 @@ repositories {
 
 dependencies {
     // Checks
-    errorprone("com.google.errorprone:error_prone_core:2.9.0")
-    checkstyle("com.puppycrawl.tools:checkstyle:9.0")
+    errorprone("com.google.errorprone:error_prone_core:2.36.0")
+    checkstyle("com.puppycrawl.tools:checkstyle:10.21.0")
 
     // Logging
-    implementation("org.slf4j:slf4j-api:1.7.32")
-    implementation("ch.qos.logback:logback-classic:1.2.6")
+    implementation("org.slf4j:slf4j-api:2.0.16")
+    implementation("ch.qos.logback:logback-classic:1.5.15")
 
     // Annotations for better code documentation
-    implementation("org.jetbrains:annotations:22.0.0")
-    implementation("com.github.spotbugs:spotbugs-annotations:4.4.1")
+    implementation("org.jetbrains:annotations:26.0.1")
+    implementation("com.github.spotbugs:spotbugs-annotations:4.8.6")
 
-    // Guava primitives
-    implementation("com.google.guava:guava:30.1.1-jre")
+    // Popular data structures
+    implementation("com.google.guava:guava:33.4.0-jre")
+    implementation("it.unimi.dsi:fastutil:8.5.15")
+
 
     // JUnit Jupiter test framework
-    testImplementation("org.junit.jupiter:junit-jupiter-api:5.7.2")
-    testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:5.7.2")
+    testImplementation("org.junit.jupiter:junit-jupiter-api:5.11.4")
+    testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:5.11.4")
 }
 
 val run by tasks.getting(JavaExec::class) {
@@ -92,7 +95,7 @@ checkstyle {
 
 pmd {
     isConsoleOutput = true
-    toolVersion = "6.38.0"
+    toolVersion = "7.8.0"
     ruleSets = listOf()
     ruleSetConfig = project.resources.text.fromFile("pmd.xml")
 
@@ -109,7 +112,7 @@ spotbugs {
     showProgress.set(true)
 
     tasks.spotbugsMain {
-        reports.maybeCreate("html").isEnabled = true
+        reports.maybeCreate("html").required.set(true)
     }
 
     tasks.spotbugsTest {

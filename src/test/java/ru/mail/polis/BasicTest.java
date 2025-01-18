@@ -17,17 +17,16 @@
 package ru.mail.polis;
 
 import com.google.common.collect.Iterators;
-import jdk.incubator.foreign.MemorySegment;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import ru.mail.polis.utils.FileUtils;
 
 import java.io.File;
+import java.lang.foreign.MemorySegment;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 import java.util.TreeMap;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -52,8 +51,8 @@ class BasicTest extends TestBase {
     final var value = randomValue();
     try (var dao = DAOFactory.create(data)) {
       dao.upsert(key, value);
-      assertEquals(value, dao.get(key));
-      assertEquals(value, dao.get(FileUtils.duplicate(key)));
+      assertEqualsOfMemorySegments(value, dao.get(key));
+      assertEqualsOfMemorySegments(value, dao.get(FileUtils.duplicate(key)));
     }
   }
 
@@ -77,9 +76,9 @@ class BasicTest extends TestBase {
         final var expected = expectedIter.next();
         final var actual = actualIter.next();
         final var expectedKey = expected.getKey();
-        final var actualKey = actual.getKey();
-        assertEquals(expectedKey, actualKey);
-        assertEquals(expected.getValue(), actual.getValue());
+        final var actualKey = actual.key();
+        assertEqualsOfMemorySegments(expectedKey, actualKey);
+        assertEqualsOfMemorySegments(expected.getValue(), actual.value());
       }
       assertFalse(actualIter.hasNext());
     }
@@ -105,9 +104,9 @@ class BasicTest extends TestBase {
         final var expected = expectedIter.next();
         final var actual = actualIter.next();
         final var expectedKey = expected.getKey();
-        final var actualKey = actual.getKey();
-        assertEquals(expectedKey, actualKey);
-        assertEquals(expected.getValue(), actual.getValue());
+        final var actualKey = actual.key();
+        assertEqualsOfMemorySegments(expectedKey, actualKey);
+        assertEqualsOfMemorySegments(expected.getValue(), actual.value());
       }
       assertFalse(actualIter.hasNext());
     }
@@ -134,9 +133,9 @@ class BasicTest extends TestBase {
         final var expected = expectedIter.next();
         final var actual = actualIter.next();
         final var expectedKey = expected.getKey();
-        final var actualKey = actual.getKey();
-        assertEquals(expectedKey, actualKey);
-        assertEquals(expected.getValue(), actual.getValue());
+        final var actualKey = actual.key();
+        assertEqualsOfMemorySegments(expectedKey, actualKey);
+        assertEqualsOfMemorySegments(expected.getValue(), actual.value());
       }
       assertFalse(actualIter.hasNext());
     }
@@ -152,15 +151,12 @@ class BasicTest extends TestBase {
         final var key = randomKey();
         final var value = randomValue();
         dao.upsert(key, value);
-        System.err.println(i);
-        System.err.println(map);
-        System.err.println(key);
         assertNull(map.put(key, value));
       }
 
       // Check the values
       final Iterator<DaoRecord> actualIter = dao.iterator(map.lastKey());
-      assertEquals(map.get(map.lastKey()), actualIter.next().getValue());
+      assertEqualsOfMemorySegments(map.get(map.lastKey()), actualIter.next().value());
       assertFalse(actualIter.hasNext());
     }
   }
@@ -168,11 +164,11 @@ class BasicTest extends TestBase {
   @Test
   void emptyValue(@TempDir File data) throws Exception {
     final var key = randomKey();
-    final var value = MemorySegment.ofArray(new byte[0]);
+    final var value = FileUtils.EMPTY_MEMORY_SEGMENT;
     try (var dao = DAOFactory.create(data)) {
       dao.upsert(key, value);
-      assertEquals(value, dao.get(key));
-      assertEquals(value, dao.get(FileUtils.duplicate(key)));
+      assertEqualsOfMemorySegments(value, dao.get(key));
+      assertEqualsOfMemorySegments(value, dao.get(FileUtils.duplicate(key)));
     }
   }
 
@@ -183,11 +179,11 @@ class BasicTest extends TestBase {
     final var value2 = randomValue();
     try (var dao = DAOFactory.create(data)) {
       dao.upsert(key, value1);
-      assertEquals(value1, dao.get(key));
-      assertEquals(value1, dao.get(FileUtils.duplicate(key)));
+      assertEqualsOfMemorySegments(value1, dao.get(key));
+      assertEqualsOfMemorySegments(value1, dao.get(FileUtils.duplicate(key)));
       dao.upsert(key, value2);
-      assertEquals(value2, dao.get(key));
-      assertEquals(value2, dao.get(FileUtils.duplicate(key)));
+      assertEqualsOfMemorySegments(value2, dao.get(key));
+      assertEqualsOfMemorySegments(value2, dao.get(FileUtils.duplicate(key)));
     }
   }
 
@@ -197,8 +193,8 @@ class BasicTest extends TestBase {
     final var value = randomValue();
     try (var dao = DAOFactory.create(data)) {
       dao.upsert(key, value);
-      assertEquals(value, dao.get(key));
-      assertEquals(value, dao.get(FileUtils.duplicate(key)));
+      assertEqualsOfMemorySegments(value, dao.get(key));
+      assertEqualsOfMemorySegments(value, dao.get(FileUtils.duplicate(key)));
       dao.remove(key);
       assertThrows(NoSuchElementException.class, () -> dao.get(key));
     }

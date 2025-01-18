@@ -1,84 +1,83 @@
 package ru.mail.polis.markus.memtable;
 
-import jdk.incubator.foreign.MemorySegment;
-import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import ru.mail.polis.DAO;
+import ru.mail.polis.Config;
 import ru.mail.polis.DaoRecord;
-import ru.mail.polis.markus.sstable.SsTable;
+import ru.mail.polis.utils.FileUtils;
 
-import java.io.IOException;
+import java.lang.foreign.MemorySegment;
+import java.util.Collection;
 import java.util.Comparator;
 import java.util.Iterator;
-import java.util.Map;
 import java.util.SortedMap;
-import java.util.TreeMap;
+import java.util.concurrent.ConcurrentSkipListMap;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.stream.Stream;
+
+import static ru.mail.polis.utils.DaoRecordUtils.sizeOf;
 
 /**
  * Base MemTable implementation.
  */
-public class MemTable implements DAO {
+public final class MemTable {
+    private static final Logger LOG = LoggerFactory.getLogger(MemTable.class);
+    private final SortedMap<MemorySegment, DaoRecord> data =
+            new ConcurrentSkipListMap<>(FileUtils.MEMORY_SEGMENT_COMPARATOR);
+    private final AtomicLong contentSize = new AtomicLong();
+    private final Config config;
 
-  private static final Logger LOG = LoggerFactory.getLogger(MemTable.class);
-
-  private final SortedMap<MemorySegment, MemorySegment> data =
-      new TreeMap<>(Comparator.comparing(MemorySegment::byteSize));
-
-  /**
-   * Create an instance of MemTable.
-   */
-  public MemTable(final SsTable ssTable) {
-    try {
-      ssTable
-          .loadData()
-          .forEach(daoRecord -> data.put(daoRecord.getKey(), daoRecord.getValue()));
-    } catch (IOException ioe) {
-      LOG.error("Error creating MemTable instance from SSTable: {}", ioe.getMessage(), ioe);
+    public MemTable(final Config config) {
+        this.config = config;
     }
-  }
 
-  public Map<MemorySegment, MemorySegment> values() {
-    return data;
-  }
+    /**
+     * Create an instance of MemTable.
+     */
+    public MemTable fillFrom(final Stream<DaoRecord> records) {
+        records
+                .takeWhile(record ->
+                        contentSize.get() + sizeOf(record)
+                                < config.maxMemTableContentSizeInBytes() * config.memTableLoadFactor())
+                .forEach(this::upsert);
 
-  @Override
-  public Iterator<DaoRecord> iterator(MemorySegment from) throws IOException {
-    return data
-        .tailMap(from)
-        .entrySet()
-        .stream()
-        .map(entry -> DaoRecord.of(entry.getKey(), entry.getValue()))
-        .iterator();
-  }
+        return this;
+    }
 
-  @Override
-  public Iterator<DaoRecord> range(MemorySegment from, @Nullable MemorySegment to) throws IOException {
-    return DAO.super.range(from, to);
-  }
+    public Iterator<DaoRecord> iterator(final MemorySegment from) {
+        LOG.trace("Iterator from={}", from);
+        return data
+                .tailMap(from)
+                .values()
+                .iterator();
+    }
 
-  @Override
-  public MemorySegment get(MemorySegment key) throws IOException {
-    return DAO.super.get(key);
-  }
+    public void upsert(final DaoRecord record) {
+        LOG.trace("Upsert record={}", record);
+        final var recordSize = sizeOf(record);
+        final var oldRecord = data.put(record.key(), record);
 
-  @Override
-  public void upsert(MemorySegment key, MemorySegment value) {
-    data.put(key, value);
-  }
+        if (oldRecord == null) {
+            contentSize.addAndGet(recordSize);
+        } else {
+            contentSize.addAndGet(recordSize - sizeOf(oldRecord));
+        }
+    }
 
-  @Override
-  public void remove(MemorySegment key) {
-    data.remove(key);
-  }
+    public Collection<DaoRecord> records() {
+        return data.values();
+    }
 
-  @Override
-  public void compact() {
+    public long contentSize() {
+        return contentSize.get();
+    }
 
-  }
-
-  @Override
-  public void close() {
-    // Do nothing
-  }
+    public MemTable refresh() {
+        LOG.debug("Refreshing MemTable");
+        return new MemTable(config)
+                .fillFrom(records()
+                        .stream()
+                        .sorted(Comparator.comparingLong(DaoRecord::timestamp).reversed())
+                );
+    }
 }

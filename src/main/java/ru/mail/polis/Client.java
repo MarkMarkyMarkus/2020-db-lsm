@@ -17,7 +17,6 @@
 package ru.mail.polis;
 
 import com.google.common.base.Splitter;
-import jdk.incubator.foreign.MemorySegment;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -25,6 +24,8 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.lang.foreign.MemorySegment;
+import java.lang.foreign.ValueLayout;
 import java.nio.charset.StandardCharsets;
 import java.util.NoSuchElementException;
 
@@ -47,7 +48,7 @@ public final class Client {
   }
 
   private static String from(final MemorySegment value) {
-    return new String(value.toByteArray(), StandardCharsets.UTF_8);
+    return new String(value.toArray(ValueLayout.OfByte.JAVA_BYTE), StandardCharsets.UTF_8);
   }
 
   /**

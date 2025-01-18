@@ -1,17 +1,16 @@
 package ru.mail.polis;
 
-import jdk.incubator.foreign.MemorySegment;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import ru.mail.polis.utils.FileUtils;
 
 import java.io.File;
 import java.io.IOException;
+import java.lang.foreign.MemorySegment;
 import java.nio.channels.FileChannel;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -67,7 +66,7 @@ class TrashTest extends TestBase {
 
     // Load and check stored value
     try (var dao = DAOFactory.create(data)) {
-      assertEquals(value, dao.get(key));
+      assertEqualsOfMemorySegments(value, dao.get(key));
     }
   }
 
@@ -90,7 +89,7 @@ class TrashTest extends TestBase {
 
     // Load and check stored value
     try (var dao = DAOFactory.create(data)) {
-      assertEquals(value, dao.get(key));
+      assertEqualsOfMemorySegments(value, dao.get(key));
     }
   }
 
@@ -113,7 +112,7 @@ class TrashTest extends TestBase {
 
     // Load and check stored value
     try (var dao = DAOFactory.create(data)) {
-      assertEquals(value, dao.get(key));
+      assertEqualsOfMemorySegments(value, dao.get(key));
     }
   }
 }

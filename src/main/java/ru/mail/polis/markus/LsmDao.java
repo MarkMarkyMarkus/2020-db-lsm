@@ -1,31 +1,49 @@
 package ru.mail.polis.markus;
 
-import jdk.incubator.foreign.MemorySegment;
+import com.google.common.collect.Iterators;
 import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import ru.mail.polis.Config;
 import ru.mail.polis.DAO;
 import ru.mail.polis.DaoRecord;
 import ru.mail.polis.markus.memtable.MemTable;
-import ru.mail.polis.markus.sstable.SsTable;
+import ru.mail.polis.markus.sstable.SsTableManager;
 
 import java.io.IOException;
+import java.lang.foreign.MemorySegment;
 import java.util.Iterator;
+
+import static ru.mail.polis.utils.DaoRecordUtils.sizeOf;
 
 /**
  * Base DAO implementation.
  */
-public class LsmDao implements DAO {
-  private final MemTable memTable;
-  private final SsTable ssTable;
+public final class LsmDao implements DAO {
+  private static final Logger LOG = LoggerFactory.getLogger(LsmDao.class);
+
+  private final Config config;
+  private final SsTableManager ssTableManager;
+
+  private MemTable memTable;
+
 
   public LsmDao(final Config config) {
-    ssTable = new SsTable(config);
-    memTable = new MemTable(ssTable);
+    LOG.debug("Opening LSM");
+    this.config = config;
+    this.ssTableManager = new SsTableManager(config);
+    this.memTable = emptyMemTable(config); // TODO: prefill with latest records from SSTable
+  }
+
+  private MemTable emptyMemTable(final Config config) {
+    return new MemTable(config);
   }
 
   @Override
-  public Iterator<DaoRecord> iterator(MemorySegment from) throws IOException {
-    return memTable.iterator(from);
+  public Iterator<DaoRecord> iterator(MemorySegment from) {
+        final var memTableIterator = memTable.iterator(from);
+        final var ssTableIterator = ssTableManager.iterator(from);
+        return Iterators.concat(memTableIterator, ssTableIterator);
   }
 
   @Override
@@ -49,23 +67,37 @@ public class LsmDao implements DAO {
 
   @Override
   public void upsert(MemorySegment key, MemorySegment value) throws IOException {
-    memTable.upsert(key, value);
+    final var record = DaoRecord.of(key, value);
+    checkSpaceAndRefresh(record);
+    memTable.upsert(record);
   }
 
   @Override
   public void remove(MemorySegment key) throws IOException {
-    memTable.remove(key);
+    final var tombstone = DaoRecord.tombstone(key);
+    checkSpaceAndRefresh(tombstone);
+    memTable.upsert(tombstone);
   }
 
   @Override
-  public void compact() throws IOException {
-    memTable.compact();
-    ssTable.compact();
+  public void compact() {
+    ssTableManager.compact();
   }
 
   @Override
-  public void close() {
-    memTable.close();
-    ssTable.close();
+  public void close() throws IOException {
+    LOG.debug("Closing LSM");
+    if (memTable.contentSize() > 0L) {
+      ssTableManager.persist(memTable);
+    }
+    ssTableManager.close();
+  }
+
+  private void checkSpaceAndRefresh(final DaoRecord record) throws IOException {
+    if (memTable.contentSize() + sizeOf(record) > config.maxMemTableContentSizeInBytes()) {
+      LOG.debug("No space left at MemTable. Persisting data to SSTable and refreshing MemTable");
+      ssTableManager.persist(memTable);
+      this.memTable = memTable.refresh();
+    }
   }
 }

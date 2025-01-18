@@ -16,12 +16,13 @@
 
 package ru.mail.polis;
 
-import jdk.incubator.foreign.MemorySegment;
 import org.jetbrains.annotations.Nullable;
+import ru.mail.polis.markus.LsmDao;
 import ru.mail.polis.utils.FileUtils;
 import ru.mail.polis.utils.IterUtils;
 
 import java.io.IOException;
+import java.lang.foreign.MemorySegment;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 
@@ -31,7 +32,7 @@ import java.util.NoSuchElementException;
  * @author Vadim Tsesko
  * @author Dmitry Schitinin
  */
-public interface DAO extends AutoCloseable {
+public sealed interface DAO extends AutoCloseable permits LsmDao {
 
   /**
    * Provides iterator (possibly empty) over {@link DaoRecord}s starting at "from" key (inclusive) in <b>ascending</b>
@@ -54,7 +55,7 @@ public interface DAO extends AutoCloseable {
       return IterUtils.empty();
     }
 
-    final DaoRecord bound = new DaoRecord(to, FileUtils.EMPTY_MEMORY_SEGMENT);
+    final DaoRecord bound = DaoRecord.of(to, FileUtils.EMPTY_MEMORY_SEGMENT);
     return IterUtils.until(iterator(from), bound);
   }
 
@@ -64,16 +65,16 @@ public interface DAO extends AutoCloseable {
    * @throws NoSuchElementException if no such record
    */
   default MemorySegment get(MemorySegment key) throws IOException {
-    final Iterator<DaoRecord> iter = iterator(key);
-    if (!iter.hasNext()) {
+      final Iterator<DaoRecord> iterator = iterator(key);
+      while (iterator.hasNext()) {
+          final DaoRecord next = iterator.next();
+          if (FileUtils.isEqual(next.key(), key)) {
+              if (next.isNotTombstone()) {
+                  return next.value();
+              } else throw new NoSuchElementException("Already removed");
+          }
+      }
       throw new NoSuchElementException("Not found");
-    }
-    final DaoRecord next = iter.next();
-    if (next.getKey().equals(key)) {
-      return next.getValue();
-    } else {
-      throw new NoSuchElementException("Not found");
-    }
   }
 
   /**

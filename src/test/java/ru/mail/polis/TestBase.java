@@ -16,23 +16,26 @@
 
 package ru.mail.polis;
 
-import jdk.incubator.foreign.MemorySegment;
 import org.jetbrains.annotations.NotNull;
 
+import java.lang.foreign.Arena;
+import java.lang.foreign.MemorySegment;
 import java.util.concurrent.ThreadLocalRandom;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * Contains utility methods for unit tests.
  *
  * @author Vadim Tsesko
  */
-abstract class TestBase {
-
+public abstract class TestBase {
   static final int KEY_LENGTH = 16;
   private static final int VALUE_LENGTH = 1024;
+  private static final Arena arena = Arena.global();
 
   @NotNull
-  static MemorySegment randomBuffer(final int length) {
+  public static MemorySegment randomBuffer(final int length) {
     assert length > 0;
     final byte[] result = new byte[length];
     ThreadLocalRandom.current().nextBytes(result);
@@ -40,22 +43,30 @@ abstract class TestBase {
   }
 
   @NotNull
-  static MemorySegment randomKey() {
+  public static MemorySegment randomKey() {
     return randomBuffer(KEY_LENGTH);
   }
 
   @NotNull
-  static MemorySegment randomValue() {
+  public static MemorySegment randomValue() {
     return randomBuffer(VALUE_LENGTH);
   }
 
   @NotNull
-  static MemorySegment join(
-      @NotNull final MemorySegment left,
-      @NotNull final MemorySegment right) {
-    final var result = MemorySegment.allocateNative(left.byteSize() + right.byteSize(), left.scope());
-    result.copyFrom(left);
-    result.copyFrom(right);
+  public static MemorySegment join(
+        @NotNull final MemorySegment left,
+        @NotNull final MemorySegment right
+  ) {
+    final var result = arena.allocate(left.byteSize() + right.byteSize());
+    MemorySegment.copy(left, 0L, result, 0L, left.byteSize());
+    MemorySegment.copy(right, 0L, result, left.byteSize(), right.byteSize());
     return result;
+  }
+
+  public static void assertEqualsOfMemorySegments(
+        @NotNull final MemorySegment m1,
+        @NotNull final MemorySegment m2
+  ) {
+    assertEquals(-1L, m1.mismatch(m2));
   }
 }

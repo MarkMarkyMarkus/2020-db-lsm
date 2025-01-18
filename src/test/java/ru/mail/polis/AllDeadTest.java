@@ -18,7 +18,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
  */
 class AllDeadTest extends TestBase {
 
-  private static final int TOMBSTONES_COUNT = 1000000;
+  private static final int TOMBSTONES_COUNT = 1_000_000;
 
   @Test
   void deadAll(@TempDir File data) throws Exception {

@@ -16,16 +16,15 @@
 
 package ru.mail.polis;
 
-import jdk.incubator.foreign.MemorySegment;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import ru.mail.polis.utils.FileUtils;
 
 import java.io.File;
+import java.lang.foreign.MemorySegment;
 import java.util.ArrayList;
 import java.util.NoSuchElementException;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -61,7 +60,7 @@ class CompactionTest extends TestBase {
     // Check the contents
     try (var dao = DAOFactory.create(data)) {
       for (final var key : keys) {
-        assertEquals(join(key, value), dao.get(key));
+        assertEqualsOfMemorySegments(join(key, value), dao.get(key));
       }
 
       // Compact
@@ -69,11 +68,11 @@ class CompactionTest extends TestBase {
 
       // Check the contents
       for (final var key : keys) {
-        assertEquals(join(key, value), dao.get(key));
+        assertEqualsOfMemorySegments(join(key, value), dao.get(key));
       }
     }
 
-    // Check store size
+    // Check store dataSize
     final long size = FileUtils.directorySize(data);
     final long minSize = keyCount * (KEY_LENGTH + KEY_LENGTH + valueSize);
 
@@ -110,12 +109,12 @@ class CompactionTest extends TestBase {
 
         // Check the contents
         for (final var key : keys) {
-          assertEquals(join(key, value), dao.get(key));
+          assertEqualsOfMemorySegments(join(key, value), dao.get(key));
         }
       }
     }
 
-    // Check store size
+    // Check store dataSize
     final long size = FileUtils.directorySize(data);
     final long minSize = keyCount * (KEY_LENGTH + KEY_LENGTH + valueSize);
 
@@ -146,7 +145,7 @@ class CompactionTest extends TestBase {
     // Check the contents
     try (var dao = DAOFactory.create(data)) {
       for (final var key : keys) {
-        assertEquals(join(key, value), dao.get(key));
+        assertEqualsOfMemorySegments(join(key, value), dao.get(key));
       }
 
       // Remove keys

@@ -1,13 +1,12 @@
 package ru.mail.polis;
 
-import com.google.common.base.Charsets;
 import com.google.common.collect.Iterators;
-import jdk.incubator.foreign.MemorySegment;
 import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import java.io.File;
+import java.lang.foreign.MemorySegment;
 import java.util.Arrays;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -22,31 +21,32 @@ class MusicTest extends TestBase {
   private static final String DELIMITER = ":";
 
   @NotNull
-  private static MemorySegment artistFrom(
-      @NotNull final String artist) {
+  private static MemorySegment artistFrom(@NotNull final String artist) {
     assert !artist.contains(DELIMITER);
-    return MemorySegment.ofArray((artist + DELIMITER).getBytes(Charsets.UTF_8));
+    return MemorySegment.ofArray((artist + DELIMITER).getBytes());
   }
 
   @NotNull
   private static MemorySegment albumFrom(
-      @NotNull final String artist,
-      @NotNull final String album) {
+        @NotNull final String artist,
+        @NotNull final String album
+  ) {
     assert !artist.contains(DELIMITER);
     assert !album.contains(DELIMITER);
-    return MemorySegment.ofArray((artist + DELIMITER + album + DELIMITER).getBytes(Charsets.UTF_8));
+    return MemorySegment.ofArray((artist + DELIMITER + album + DELIMITER).getBytes());
   }
 
   @NotNull
   private static MemorySegment trackFrom(
-      @NotNull final String artist,
-      @NotNull final String album,
-      @NotNull final String track) {
+        @NotNull final String artist,
+        @NotNull final String album,
+        @NotNull final String track
+  ) {
     assert !artist.contains(DELIMITER);
     assert !album.contains(DELIMITER);
     assert !track.contains(DELIMITER);
     return MemorySegment.ofArray(
-        (artist + DELIMITER + album + DELIMITER + track).getBytes(Charsets.UTF_8));
+          (artist + DELIMITER + album + DELIMITER + track).getBytes());
   }
 
   @NotNull
@@ -96,12 +96,12 @@ class MusicTest extends TestBase {
 
   @Test
   void nextTest() {
-    assertEquals(from(1), next(from(0)));
-    assertEquals(from(-126), next(from(-127)));
-    assertEquals(from(1, 0), next(from(127)));
-    assertEquals(from(1, 0, 0), next(from(127, 127)));
-    assertEquals(from(127, 127), next(from(127, 126)));
-    assertEquals(from(127, 0), next(from(126, 127)));
+    assertEqualsOfMemorySegments(from(1), next(from(0)));
+    assertEqualsOfMemorySegments(from(-126), next(from(-127)));
+    assertEqualsOfMemorySegments(from(1, 0), next(from(127)));
+    assertEqualsOfMemorySegments(from(1, 0, 0), next(from(127, 127)));
+    assertEqualsOfMemorySegments(from(127, 127), next(from(127, 126)));
+    assertEqualsOfMemorySegments(from(127, 0), next(from(126, 127)));
   }
 
   @Test
@@ -124,12 +124,18 @@ class MusicTest extends TestBase {
       assertEquals(2, Iterators.size(dao.range(artistFrom("Ar2"), next(artistFrom("Ar2")))));
 
       // Albums
-      assertEquals(2,
-          Iterators.size(dao.range(albumFrom("Ar1", "Al11"), next(albumFrom("Ar1", "Al11")))));
-      assertEquals(3,
-          Iterators.size(dao.range(albumFrom("Ar1", "Al12"), next(albumFrom("Ar1", "Al12")))));
-      assertEquals(2,
-          Iterators.size(dao.range(albumFrom("Ar2", "Al21"), next(albumFrom("Ar2", "Al21")))));
+      assertEquals(
+            2,
+            Iterators.size(dao.range(albumFrom("Ar1", "Al11"), next(albumFrom("Ar1", "Al11"))))
+      );
+      assertEquals(
+            3,
+            Iterators.size(dao.range(albumFrom("Ar1", "Al12"), next(albumFrom("Ar1", "Al12"))))
+      );
+      assertEquals(
+            2,
+            Iterators.size(dao.range(albumFrom("Ar2", "Al21"), next(albumFrom("Ar2", "Al21"))))
+      );
     }
   }
 }
