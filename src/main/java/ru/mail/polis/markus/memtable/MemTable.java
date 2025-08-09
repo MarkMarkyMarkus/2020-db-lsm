@@ -44,8 +44,11 @@ public final class MemTable {
         return this;
     }
 
-    public Iterator<DaoRecord> iterator(final MemorySegment from) {
-        LOG.trace("Iterator from={}", from);
+    public Iterator<DaoRecord> iterator() {
+        return data.values().iterator();
+    }
+
+    public Iterator<DaoRecord> from(final MemorySegment from) {
         return data
                 .tailMap(from)
                 .values()

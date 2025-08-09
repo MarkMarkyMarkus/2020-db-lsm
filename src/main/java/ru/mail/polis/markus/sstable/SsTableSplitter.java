@@ -10,11 +10,11 @@ import java.util.function.Consumer;
 import static ru.mail.polis.utils.DaoRecordUtils.sizeOf;
 
 public class SsTableSplitter implements Spliterator<DaoRecord> {
-  private final SsTableReader reader;
+  private final SstReader reader;
   private final SsTable ssTable;
   private long offset = 0L;
 
-  public SsTableSplitter(final SsTableReader reader, final SsTable ssTable) {
+  public SsTableSplitter(final SstReader reader, final SsTable ssTable) {
     this.reader = reader;
     this.ssTable = ssTable;
   }

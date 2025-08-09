@@ -8,7 +8,7 @@ import ru.mail.polis.Config;
 import ru.mail.polis.DAO;
 import ru.mail.polis.DaoRecord;
 import ru.mail.polis.markus.memtable.MemTable;
-import ru.mail.polis.markus.sstable.SsTableManager;
+import ru.mail.polis.markus.sstable.SstManager;
 
 import java.io.IOException;
 import java.lang.foreign.MemorySegment;
@@ -23,7 +23,7 @@ public final class LsmDao implements DAO {
   private static final Logger LOG = LoggerFactory.getLogger(LsmDao.class);
 
   private final Config config;
-  private final SsTableManager ssTableManager;
+  private final SstManager sstManager;
 
   private MemTable memTable;
 
@@ -31,7 +31,7 @@ public final class LsmDao implements DAO {
   public LsmDao(final Config config) {
     LOG.debug("Opening LSM");
     this.config = config;
-    this.ssTableManager = new SsTableManager(config);
+    this.sstManager = new SstManager(config);
     this.memTable = emptyMemTable(config); // TODO: prefill with latest records from SSTable
   }
 
@@ -41,8 +41,8 @@ public final class LsmDao implements DAO {
 
   @Override
   public Iterator<DaoRecord> iterator(MemorySegment from) {
-        final var memTableIterator = memTable.iterator(from);
-        final var ssTableIterator = ssTableManager.iterator(from);
+        final var memTableIterator = memTable.from(from);
+        final var ssTableIterator = sstManager.iterator(from);
         return Iterators.concat(memTableIterator, ssTableIterator);
   }
 
@@ -81,22 +81,22 @@ public final class LsmDao implements DAO {
 
   @Override
   public void compact() {
-    ssTableManager.compact();
+    sstManager.compact();
   }
 
   @Override
   public void close() throws IOException {
     LOG.debug("Closing LSM");
     if (memTable.contentSize() > 0L) {
-      ssTableManager.persist(memTable);
+      sstManager.persist(memTable);
     }
-    ssTableManager.close();
+    sstManager.close();
   }
 
   private void checkSpaceAndRefresh(final DaoRecord record) throws IOException {
     if (memTable.contentSize() + sizeOf(record) > config.maxMemTableContentSizeInBytes()) {
       LOG.debug("No space left at MemTable. Persisting data to SSTable and refreshing MemTable");
-      ssTableManager.persist(memTable);
+      sstManager.persist(memTable);
       this.memTable = memTable.refresh();
     }
   }

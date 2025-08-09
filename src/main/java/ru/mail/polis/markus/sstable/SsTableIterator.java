@@ -8,13 +8,13 @@ import java.util.Iterator;
 import static ru.mail.polis.utils.DaoRecordUtils.sizeOf;
 
 public class SsTableIterator implements Iterator<DaoRecord> {
-    public static final SsTableIterator EMPTY = new SsTableIterator(new SsTableReader(), MemorySegment.NULL);
+    public static final SsTableIterator EMPTY = new SsTableIterator(new SstReader(), MemorySegment.NULL);
 
-    private final SsTableReader reader;
+    private final SstReader reader;
     private final MemorySegment memorySegment;
     private long offset = 0L;
 
-    public SsTableIterator(final SsTableReader reader, final MemorySegment memorySegment) {
+    public SsTableIterator(final SstReader reader, final MemorySegment memorySegment) {
         this.reader = reader;
         this.memorySegment = memorySegment;
     }

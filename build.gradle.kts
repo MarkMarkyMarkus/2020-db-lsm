@@ -1,5 +1,4 @@
 import net.ltgt.gradle.errorprone.errorprone
-import org.gradle.api.tasks.testing.logging.TestExceptionFormat
 
 plugins {
     java
@@ -13,7 +12,7 @@ plugins {
 
 java {
     toolchain {
-        languageVersion.set(JavaLanguageVersion.of(23))
+        languageVersion.set(JavaLanguageVersion.of(24))
     }
     modularity.inferModulePath.set(false)
 }
@@ -28,7 +27,7 @@ dependencies {
     checkstyle("com.puppycrawl.tools:checkstyle:10.21.0")
 
     // Logging
-    implementation("org.slf4j:slf4j-api:2.0.16")
+    implementation("org.slf4j:slf4j-api:2.0.17")
     implementation("ch.qos.logback:logback-classic:1.5.15")
 
     // Annotations for better code documentation
